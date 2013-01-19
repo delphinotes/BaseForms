@@ -1,0 +1,1 @@
+brc32.exe -r -fo"..\BaseFormsDesign.dcr" BaseFormsDesign.rc

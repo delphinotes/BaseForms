@@ -1,0 +1,6 @@
+__history
+bin
+*.identcache
+*.local
+*.dcu
+*.cbk
