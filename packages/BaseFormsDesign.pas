@@ -15,7 +15,7 @@ uses
 
 type
   TdnCustomFormWizard = class(TNotifierObject, IOTARepositoryWizard, IOTARepositoryWizard60,
-                            IOTARepositoryWizard80, IOTAWizard, IOTAFormWizard, IOTAProjectWizard)
+                            IOTARepositoryWizard80, IOTAWizard, IOTAProjectWizard, IOTAFormWizard)
   protected
     function ThisFormClass: TComponentClass; virtual; abstract;
     function ThisFormName: string;
@@ -36,8 +36,8 @@ type
     function GetName: string; virtual;
     function GetState: TWizardState;
     procedure Execute;
-    // IOTAFormWizard
     // IOTAProjectWizard
+    // IOTAFormWizard
   end;
 
   TdnFormWizard = class(TdnCustomFormWizard)

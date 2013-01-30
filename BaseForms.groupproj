@@ -1,0 +1,48 @@
+﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+		<PropertyGroup>
+			<ProjectGuid>{B75F92FE-8E57-4D68-8B6F-4633CB6094B4}</ProjectGuid>
+		</PropertyGroup>
+		<ItemGroup>
+			<Projects Include="packages\BaseFormsDesign140.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="BaseFormsTest\BaseFormsTest.dproj">
+				<Dependencies/>
+			</Projects>
+		</ItemGroup>
+		<ProjectExtensions>
+			<Borland.Personality>Default.Personality.12</Borland.Personality>
+			<Borland.ProjectType/>
+			<BorlandProject>
+				<Default.Personality/>
+			</BorlandProject>
+		</ProjectExtensions>
+		<Target Name="BaseFormsDesign140">
+			<MSBuild Projects="packages\BaseFormsDesign140.dproj"/>
+		</Target>
+		<Target Name="BaseFormsDesign140:Clean">
+			<MSBuild Targets="Clean" Projects="packages\BaseFormsDesign140.dproj"/>
+		</Target>
+		<Target Name="BaseFormsDesign140:Make">
+			<MSBuild Targets="Make" Projects="packages\BaseFormsDesign140.dproj"/>
+		</Target>
+		<Target Name="BaseFormsTest">
+			<MSBuild Projects="BaseFormsTest\BaseFormsTest.dproj"/>
+		</Target>
+		<Target Name="BaseFormsTest:Clean">
+			<MSBuild Targets="Clean" Projects="BaseFormsTest\BaseFormsTest.dproj"/>
+		</Target>
+		<Target Name="BaseFormsTest:Make">
+			<MSBuild Targets="Make" Projects="BaseFormsTest\BaseFormsTest.dproj"/>
+		</Target>
+		<Target Name="Build">
+			<CallTarget Targets="BaseFormsDesign140;BaseFormsTest"/>
+		</Target>
+		<Target Name="Clean">
+			<CallTarget Targets="BaseFormsDesign140:Clean;BaseFormsTest:Clean"/>
+		</Target>
+		<Target Name="Make">
+			<CallTarget Targets="BaseFormsDesign140:Make;BaseFormsTest:Make"/>
+		</Target>
+		<Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+	</Project>

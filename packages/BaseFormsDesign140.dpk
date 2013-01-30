@@ -22,7 +22,7 @@ package BaseFormsDesign140;
 {$WRITEABLECONST OFF}
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
-{$DESCRIPTION 'delphinotes.ru TBaseForm and TBaseFrame'}
+{$DESCRIPTION 'DelphiNotes.ru Wizard for creating BaseForm and BaseFrame'}
 {$IMPLICITBUILD ON}
 
 requires

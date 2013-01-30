@@ -1,0 +1,23 @@
+object TestAutoFree: TTestAutoFree
+  Left = 0
+  Top = 0
+  Caption = 'TestAutoFree'
+  ClientHeight = 208
+  ClientWidth = 325
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  OldCreateOrder = False
+  OnClose = BaseFormClose
+  OnCloseQuery = BaseFormCloseQuery
+  OnCreate = BaseFormCreate
+  OnDestroy = BaseFormDestroy
+  OnHide = BaseFormHide
+  OnShow = BaseFormShow
+  FreeOnClose = True
+  PixelsPerInch = 96
+  TextHeight = 13
+end
