@@ -13,248 +13,7 @@ uses
   Classes, SysUtils, Windows, Graphics,
   DesignIntf, DesignEditors, ToolsApi, WCtlForm, TypInfo;
 
-type
-  TdnCustomFormWizard = class(TNotifierObject, IOTARepositoryWizard, IOTARepositoryWizard60,
-                            IOTARepositoryWizard80, IOTAWizard, IOTAProjectWizard, IOTAFormWizard)
-  protected
-    function ThisFormClass: TComponentClass; virtual; abstract;
-    function ThisFormName: string;
-    function ThisFormIconName: string;
-  public
-    // IOTARepositoryWizard
-    function GetAuthor: string;
-    function GetComment: string;
-    function GetPage: string;
-    function GetGlyph: Cardinal;
-    // IOTARepositoryWizard60
-    function GetDesigner: string;
-    // IOTARepositoryWizard80
-    function GetGalleryCategory: IOTAGalleryCategory;
-    function GetPersonality: string;
-    // IOTAWizard
-    function GetIDString: string;
-    function GetName: string; virtual;
-    function GetState: TWizardState;
-    procedure Execute;
-    // IOTAProjectWizard
-    // IOTAFormWizard
-  end;
-
-  TdnFormWizard = class(TdnCustomFormWizard)
-  protected
-    function ThisFormClass: TComponentClass; override;
-  public
-    function GetName: string; override;
-  end;
-
-  TdnFormCustomModule = class(TCustomModule)
-    class function DesignClass: TComponentClass; override;
-  end;
-
-  TdnFrameWizard = class(TdnCustomFormWizard)
-  protected
-    function ThisFormClass: TComponentClass; override;
-  public
-    function GetName: string; override;
-  end;
-
-  TdnFrameCustomModule = class(TWinControlCustomModule)
-  public
-    function Nestable: Boolean; override;
-  end;
-
-procedure Register;
-begin
-  RegisterCustomModule(TBaseForm, TdnFormCustomModule);
-  RegisterPackageWizard(TdnFormWizard.Create);
-
-  RegisterCustomModule(TBaseFrame, TdnFrameCustomModule);
-  RegisterPackageWizard(TdnFrameWizard.Create);
-end;
-
-{ TdnNewFormCreator }
-
-type
-  TdnNewFormCreator = class(TInterfacedObject, IOTACreator, IOTAModuleCreator)
-  private
-    FAncestorName: string;
-  public
-    // IOTACreator
-    function GetCreatorType: string;
-    function GetExisting: Boolean;
-    function GetFileSystem: string;
-    function GetOwner: IOTAModule;
-    function GetUnnamed: Boolean;
-    // IOTAModuleCreator
-    function GetAncestorName: string;
-    function GetImplFileName: string;
-    function GetIntfFileName: string;
-    function GetFormName: string;
-    function GetMainForm: Boolean;
-    function GetShowForm: Boolean;
-    function GetShowSource: Boolean;
-    function NewFormFile(const FormIdent, AncestorIdent: string): IOTAFile;
-    function NewImplSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
-    function NewIntfSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
-    procedure FormCreated(const FormEditor: IOTAFormEditor);
-  public
-    constructor Create(const FormName, AncestorName: string);
-  end;
-
-constructor TdnNewFormCreator.Create(const FormName, AncestorName: string);
-begin
-  inherited Create;
-  FAncestorName := AncestorName;
-end;
-
-procedure TdnNewFormCreator.FormCreated(const FormEditor: IOTAFormEditor);
-begin
-end;
-
-function TdnNewFormCreator.GetAncestorName: string;
-begin
-  Result := FAncestorName;
-end;
-
-function TdnNewFormCreator.GetCreatorType: string;
-begin
-  Result := sForm;
-end;
-
-function TdnNewFormCreator.GetExisting: Boolean;
-begin
-  Result := False;
-end;
-
-function TdnNewFormCreator.GetFileSystem: string;
-begin
-  Result := '';
-end;
-
-function TdnNewFormCreator.GetFormName: string;
-begin
-  Result := '';
-end;
-
-function TdnNewFormCreator.GetImplFileName: string;
-begin
-  Result := '';
-end;
-
-function TdnNewFormCreator.GetIntfFileName: string;
-begin
-  Result := '';
-end;
-
-function TdnNewFormCreator.GetMainForm: Boolean;
-begin
-  Result := False;
-end;
-
-function TdnNewFormCreator.GetOwner: IOTAModule;
-begin
-  Result := nil;//GetActiveProject;
-end;
-
-function TdnNewFormCreator.GetShowForm: Boolean;
-begin
-  Result := True;
-end;
-
-function TdnNewFormCreator.GetShowSource: Boolean;
-begin
-  Result := True;
-end;
-
-function TdnNewFormCreator.GetUnnamed: Boolean;
-begin
-  Result := True;
-end;
-
-function TdnNewFormCreator.NewFormFile(const FormIdent, AncestorIdent: string): IOTAFile;
-begin
-  Result := nil;
-end;
-
-function TdnNewFormCreator.NewImplSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
-begin
-  Result := nil;
-end;
-
-function TdnNewFormCreator.NewIntfSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
-begin
-  Result := nil;
-end;
-
-{ TdnCustomFormWizard }
-
-function TdnCustomFormWizard.ThisFormName: string;
-begin
-  Result := ThisFormClass.ClassName;
-  Delete(Result, 1, 1); // drop the 'T'
-end;
-
-function TdnCustomFormWizard.ThisFormIconName: string;
-begin
-  Result := UpperCase(ThisFormClass.ClassName);
-end;
-
-function TdnCustomFormWizard.GetAuthor: string;
-begin
-  Result := 'DelphiNotes.ru';
-end;
-
-function TdnCustomFormWizard.GetComment: string;
-begin
-  Result := '';
-end;
-
-function TdnCustomFormWizard.GetPage: string;
-begin
-  Result := 'New';
-end;
-
-function TdnCustomFormWizard.GetGlyph: Cardinal;
-begin
-  Result := LoadIcon(HInstance, PChar(ThisFormIconName));
-end;
-
-function TdnCustomFormWizard.GetDesigner: string;
-begin
-  Result := dVCL;
-end;
-
-function TdnCustomFormWizard.GetGalleryCategory: IOTAGalleryCategory;
-var
-  Category: IOTAGalleryCategory;
-  CatManager: IOTAGalleryCategoryManager;
-begin
-  CatManager := (BorlandIDEServices as IOTAGalleryCategoryManager);
-  Assert(Assigned(CatManager));
-  Category := CatManager.FindCategory(sCategoryDelphiNewFiles);
-  Assert(Assigned(Category));
-  Result := Category;
-end;
-
-function TdnCustomFormWizard.GetPersonality: string;
-begin
-  Result := sDelphiPersonality;
-end;
-
-function TdnCustomFormWizard.GetIDString: string;
-begin
-  Result := 'DN.Create_' + ThisFormName + '.Wizard';
-end;
-
-function TdnCustomFormWizard.GetName: string;
-begin
-  Result := ThisFormName;
-end;
-
-function TdnCustomFormWizard.GetState: TWizardState;
-begin
-  Result := [wsEnabled];
-end;
+{ misc }
 
 procedure AddUnitToUses(Module: IOTAModule; UnitName: string);
 const
@@ -297,48 +56,302 @@ begin
   end;
 end;
 
-procedure TdnCustomFormWizard.Execute;
-var
-  Module: IOTAModule;
+{ TCustomBaseFormWizard }
+type
+  TCustomBaseFormWizard = class(TNotifierObject, IOTARepositoryWizard, IOTARepositoryWizard60, IOTARepositoryWizard80,
+                            IOTAWizard, IOTAProjectWizard, IOTAFormWizard)
+  protected
+    function ThisFormClass: TComponentClass; virtual; abstract;
+    function ThisUnitName: string;
+    function ThisAncestorName: string;
+    function ThisFormIconName: string;
+  public
+    // IOTARepositoryWizard
+    function GetAuthor: string;
+    function GetComment: string;
+    function GetPage: string;
+    function GetGlyph: Cardinal;
+    // IOTARepositoryWizard60
+    function GetDesigner: string;
+    // IOTARepositoryWizard80
+    function GetGalleryCategory: IOTAGalleryCategory;
+    function GetPersonality: string;
+    // IOTAWizard
+    function GetIDString: string;
+    function GetName: string; virtual;
+    function GetState: TWizardState;
+    procedure Execute;
+    // IOTAProjectWizard
+    // IOTAFormWizard
+  end;
+
+  TBaseFormWizard = class(TCustomBaseFormWizard)
+  protected
+    function ThisFormClass: TComponentClass; override;
+  public
+    function GetName: string; override;
+  end;
+
+  TBaseFormModule = class(TCustomModule)
+    class function DesignClass: TComponentClass; override;
+  end;
+
+  TBaseFrameWizard = class(TCustomBaseFormWizard)
+  protected
+    function ThisFormClass: TComponentClass; override;
+  public
+    function GetName: string; override;
+  end;
+
+  TBaseFrameModule = class(TWinControlCustomModule)
+  public
+    function Nestable: Boolean; override;
+  end;
+
+procedure Register;
 begin
-  Module := (BorlandIDEServices as IOTAModuleServices).CreateModule(TdnNewFormCreator.Create('', ThisFormName));
-  AddUnitToUses(Module, string(GetTypeData(PTypeInfo(ThisFormClass.ClassInfo)).UnitName));
+  RegisterCustomModule(TBaseForm, TBaseFormModule);
+  RegisterPackageWizard(TBaseFormWizard.Create);
+
+  RegisterCustomModule(TBaseFrame, TBaseFrameModule);
+  RegisterPackageWizard(TBaseFrameWizard.Create);
 end;
 
-{ TdnFormWizard }
+{ TBaseFormCreator }
 
-function TdnFormWizard.ThisFormClass: TComponentClass;
+type
+  TBaseFormCreator = class(TInterfacedObject, IOTACreator, IOTAModuleCreator)
+  private
+    FAncestorName: string;
+  public
+    // IOTACreator
+    function GetCreatorType: string;
+    function GetExisting: Boolean;
+    function GetFileSystem: string;
+    function GetOwner: IOTAModule;
+    function GetUnnamed: Boolean;
+    // IOTAModuleCreator
+    function GetAncestorName: string;
+    function GetImplFileName: string;
+    function GetIntfFileName: string;
+    function GetFormName: string;
+    function GetMainForm: Boolean;
+    function GetShowForm: Boolean;
+    function GetShowSource: Boolean;
+    function NewFormFile(const FormIdent, AncestorIdent: string): IOTAFile;
+    function NewImplSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+    function NewIntfSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+    procedure FormCreated(const FormEditor: IOTAFormEditor);
+  public
+    constructor Create(const AncestorName: string);
+  end;
+
+constructor TBaseFormCreator.Create(const AncestorName: string);
 begin
-  Result := TBaseForm;
+  inherited Create;
+  FAncestorName := AncestorName;
 end;
 
-function TdnFormWizard.GetName: string;
+procedure TBaseFormCreator.FormCreated(const FormEditor: IOTAFormEditor);
 begin
-  Result := 'DN Base Form';
 end;
 
-{ TdnFormCustomModule }
-
-class function TdnFormCustomModule.DesignClass: TComponentClass;
+function TBaseFormCreator.GetAncestorName: string;
 begin
-  Result := TBaseForm;
+  Result := FAncestorName;
 end;
 
-{ TdnFrameCustomModule }
+function TBaseFormCreator.GetCreatorType: string;
+begin
+  Result := sForm;
+end;
 
-function TdnFrameCustomModule.Nestable: Boolean;
+function TBaseFormCreator.GetExisting: Boolean;
+begin
+  Result := False;
+end;
+
+function TBaseFormCreator.GetFileSystem: string;
+begin
+  Result := '';
+end;
+
+function TBaseFormCreator.GetFormName: string;
+begin
+  Result := '';
+end;
+
+function TBaseFormCreator.GetImplFileName: string;
+begin
+  Result := '';
+end;
+
+function TBaseFormCreator.GetIntfFileName: string;
+begin
+  Result := '';
+end;
+
+function TBaseFormCreator.GetMainForm: Boolean;
+begin
+  Result := False;
+end;
+
+function TBaseFormCreator.GetOwner: IOTAModule;
+begin
+  Result := GetActiveProject;
+end;
+
+function TBaseFormCreator.GetShowForm: Boolean;
 begin
   Result := True;
 end;
 
-{ TdnFrameWizard }
+function TBaseFormCreator.GetShowSource: Boolean;
+begin
+  Result := True;
+end;
 
-function TdnFrameWizard.ThisFormClass: TComponentClass;
+function TBaseFormCreator.GetUnnamed: Boolean;
+begin
+  Result := True;
+end;
+
+function TBaseFormCreator.NewFormFile(const FormIdent, AncestorIdent: string): IOTAFile;
+begin
+  Result := nil;
+end;
+
+function TBaseFormCreator.NewImplSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+begin
+  Result := nil;
+end;
+
+function TBaseFormCreator.NewIntfSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+begin
+  Result := nil;
+end;
+
+{ TCustomBaseFormWizard }
+
+function TCustomBaseFormWizard.ThisUnitName: string;
+begin
+  Result := string(GetTypeData(PTypeInfo(ThisFormClass.ClassInfo)).UnitName);
+end;
+
+function TCustomBaseFormWizard.ThisAncestorName: string;
+begin
+  Result := ThisFormClass.ClassName;
+  Delete(Result, 1, 1); // drop the 'T'
+end;
+
+function TCustomBaseFormWizard.ThisFormIconName: string;
+begin
+  Result := UpperCase(ThisFormClass.ClassName);
+end;
+
+function TCustomBaseFormWizard.GetAuthor: string;
+begin
+  Result := 'DelphiNotes.ru';
+end;
+
+function TCustomBaseFormWizard.GetComment: string;
+begin
+  Result := '';
+end;
+
+function TCustomBaseFormWizard.GetPage: string;
+begin
+  Result := 'New';
+end;
+
+function TCustomBaseFormWizard.GetGlyph: Cardinal;
+begin
+  Result := LoadIcon(HInstance, PChar(ThisFormIconName));
+end;
+
+function TCustomBaseFormWizard.GetDesigner: string;
+begin
+  Result := dVCL;
+end;
+
+function TCustomBaseFormWizard.GetGalleryCategory: IOTAGalleryCategory;
+var
+  Category: IOTAGalleryCategory;
+  CatManager: IOTAGalleryCategoryManager;
+begin
+  CatManager := (BorlandIDEServices as IOTAGalleryCategoryManager);
+  Assert(Assigned(CatManager));
+  Category := CatManager.FindCategory(sCategoryDelphiNewFiles);
+  Assert(Assigned(Category));
+  Result := Category;
+end;
+
+function TCustomBaseFormWizard.GetPersonality: string;
+begin
+  Result := sDelphiPersonality;
+end;
+
+function TCustomBaseFormWizard.GetIDString: string;
+begin
+  Result := 'DN.Create_' + ThisAncestorName + '.Wizard';
+end;
+
+function TCustomBaseFormWizard.GetName: string;
+begin
+  Result := ThisAncestorName;
+end;
+
+function TCustomBaseFormWizard.GetState: TWizardState;
+begin
+  Result := [wsEnabled];
+end;
+
+procedure TCustomBaseFormWizard.Execute;
+var
+  ModuleServices: IOTAModuleServices;
+  Creator: IOTACreator;
+  Module: IOTAModule;
+begin
+  ModuleServices := (BorlandIDEServices as IOTAModuleServices);
+  Creator := TBaseFormCreator.Create(ThisAncestorName);
+  Module := ModuleServices.CreateModule(Creator);
+  AddUnitToUses(Module, ThisUnitName);
+end;
+
+{ TBaseFormWizard }
+
+function TBaseFormWizard.ThisFormClass: TComponentClass;
+begin
+  Result := TBaseForm;
+end;
+
+function TBaseFormWizard.GetName: string;
+begin
+  Result := 'DN Base Form';
+end;
+
+{ TBaseFormModule }
+
+class function TBaseFormModule.DesignClass: TComponentClass;
+begin
+  Result := TBaseForm;
+end;
+
+{ TBaseFrameModule }
+
+function TBaseFrameModule.Nestable: Boolean;
+begin
+  Result := True;
+end;
+
+{ TBaseFrameWizard }
+
+function TBaseFrameWizard.ThisFormClass: TComponentClass;
 begin
   Result := TBaseFrame;
 end;
 
-function TdnFrameWizard.GetName: string;
+function TBaseFrameWizard.GetName: string;
 begin
   Result := 'DN Base Frame';
 end;
