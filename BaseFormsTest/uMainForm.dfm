@@ -1,7 +1,7 @@
-object Form1: TForm1
+object MainForm: TMainForm
   Left = 0
   Top = 0
-  Caption = 'Form1'
+  Caption = 'MainForm'
   ClientHeight = 306
   ClientWidth = 475
   Color = clBtnFace
@@ -12,7 +12,6 @@ object Form1: TForm1
   Font.Style = []
   OldCreateOrder = False
   Position = poScreenCenter
-  OnShow = BaseFormShow
   CloseByEscape = False
   PixelsPerInch = 96
   TextHeight = 13

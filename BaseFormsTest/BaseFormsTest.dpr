@@ -2,13 +2,15 @@ program BaseFormsTest;
 
 uses
   Forms,
-  MainForm in 'MainForm.pas' {Form1};
+  uMainForm in 'uMainForm.pas' {MainForm},
+  uAutoFreeObjsForm in 'uAutoFreeObjsForm.pas' {TestAutoFree: TBaseForm},
+  uSomeForm in 'uSomeForm.pas' {SomeForm: TBaseForm};
 
 {$R *.res}
 
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  Application.CreateForm(TForm1, Form1);
+  Application.CreateForm(TMainForm, MainForm);
   Application.Run;
 end.

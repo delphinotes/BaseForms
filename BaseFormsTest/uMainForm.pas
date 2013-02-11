@@ -1,4 +1,4 @@
-unit MainForm;
+unit uMainForm;
 
 interface
 
@@ -7,7 +7,7 @@ uses
   Dialogs, BaseForms, StdCtrls, ExtCtrls;
 
 type
-  TForm1 = class(TBaseForm)
+  TMainForm = class(TBaseForm)
     btnNewModalForm: TButton;
     lblModalResult: TLabel;
     btnNewFormWithFreeOnClose: TButton;
@@ -17,7 +17,6 @@ type
     Bevel1: TBevel;
     procedure btnNewModalFormClick(Sender: TObject);
     procedure btnNewFormWithFreeOnCloseClick(Sender: TObject);
-    procedure BaseFormShow(Sender: TObject);
     procedure btnTestAutoFreeClick(Sender: TObject);
     procedure btnTestAutoFree2Click(Sender: TObject);
   private
@@ -27,7 +26,7 @@ type
   end;
 
 var
-  Form1: TForm1;
+  MainForm: TMainForm;
 
   procedure LogAF(const Msg: string);
 
@@ -40,10 +39,10 @@ uses
 
   procedure LogAF(const Msg: string);
   begin
-    Form1.memAutoFreeObjsLog.Lines.Add(Msg);
+    MainForm.memAutoFreeObjsLog.Lines.Add(Msg);
   end;
 
-procedure TForm1.btnNewModalFormClick(Sender: TObject);
+procedure TMainForm.btnNewModalFormClick(Sender: TObject);
 var
   Result: TModalResult;
 begin
@@ -56,25 +55,19 @@ begin
   end;
 end;
 
-procedure TForm1.btnTestAutoFree2Click(Sender: TObject);
+procedure TMainForm.btnTestAutoFree2Click(Sender: TObject);
 begin
   memAutoFreeObjsLog.Lines.Clear;
   TTestAutoFree.Create(Self).ShowModal;
 end;
 
-procedure TForm1.btnTestAutoFreeClick(Sender: TObject);
+procedure TMainForm.btnTestAutoFreeClick(Sender: TObject);
 begin
   memAutoFreeObjsLog.Lines.Clear;
   TTestAutoFree.Create(Self).Show;
 end;
 
-procedure TForm1.BaseFormShow(Sender: TObject);
-begin
-  //if Application.MainForm = Self then
-  //  Caption := 'Main Form';
-end;
-
-procedure TForm1.btnNewFormWithFreeOnCloseClick(Sender: TObject);
+procedure TMainForm.btnNewFormWithFreeOnCloseClick(Sender: TObject);
 begin
   with TSomeForm.Create(Self) do
   begin

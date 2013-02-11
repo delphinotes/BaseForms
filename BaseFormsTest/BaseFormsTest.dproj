@@ -46,8 +46,16 @@
 			<DelphiCompile Include="BaseFormsTest.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="MainForm.pas">
-				<Form>Form1</Form>
+			<DCCReference Include="uMainForm.pas">
+				<Form>MainForm</Form>
+			</DCCReference>
+			<DCCReference Include="uAutoFreeObjsForm.pas">
+				<Form>TestAutoFree</Form>
+				<DesignClass>TBaseForm</DesignClass>
+			</DCCReference>
+			<DCCReference Include="uSomeForm.pas">
+				<Form>SomeForm</Form>
+				<DesignClass>TBaseForm</DesignClass>
 			</DCCReference>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
