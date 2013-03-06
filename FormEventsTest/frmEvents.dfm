@@ -2,7 +2,7 @@ object EventsForm: TEventsForm
   Left = 0
   Top = 0
   Caption = 'EventsForm'
-  ClientHeight = 293
+  ClientHeight = 354
   ClientWidth = 425
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -25,7 +25,7 @@ object EventsForm: TEventsForm
   object GroupBox1: TGroupBox
     Left = 8
     Top = 8
-    Width = 213
+    Width = 206
     Height = 69
     Caption = 'Base Form properties'
     TabOrder = 0
@@ -50,11 +50,11 @@ object EventsForm: TEventsForm
   end
   object GroupBox2: TGroupBox
     Left = 8
-    Top = 83
+    Top = 137
     Width = 409
     Height = 173
     Caption = 'Event Handlers'
-    TabOrder = 1
+    TabOrder = 2
     object chkCanClose: TCheckBox
       Left = 12
       Top = 24
@@ -68,7 +68,7 @@ object EventsForm: TEventsForm
     object rgCloseAction: TRadioGroup
       Left = 12
       Top = 47
-      Width = 185
+      Width = 194
       Height = 117
       Caption = 'OnClose: Close Action'
       ItemIndex = 4
@@ -99,17 +99,17 @@ object EventsForm: TEventsForm
   end
   object btnOk: TButton
     Left = 342
-    Top = 262
+    Top = 323
     Width = 75
     Height = 25
     Caption = 'Modal OK'
     Default = True
     ModalResult = 1
-    TabOrder = 2
+    TabOrder = 5
   end
   object btnHide: TButton
     Left = 180
-    Top = 262
+    Top = 323
     Width = 75
     Height = 25
     Caption = 'Hide'
@@ -118,11 +118,59 @@ object EventsForm: TEventsForm
   end
   object btnClose: TButton
     Left = 261
-    Top = 262
+    Top = 323
     Width = 75
     Height = 25
     Caption = 'Close'
     TabOrder = 4
     OnClick = btnCloseClick
+  end
+  object GroupBox3: TGroupBox
+    Left = 220
+    Top = 8
+    Width = 197
+    Height = 123
+    Caption = 'Generate Error:'
+    TabOrder = 1
+    object chkErrorOnCloseQuery: TCheckBox
+      Left = 12
+      Top = 40
+      Width = 97
+      Height = 17
+      Caption = 'OnCloseQuery'
+      TabOrder = 1
+    end
+    object chkErrorOnClose: TCheckBox
+      Left = 12
+      Top = 59
+      Width = 97
+      Height = 17
+      Caption = 'OnClose'
+      TabOrder = 2
+    end
+    object chkErrorOnHide: TCheckBox
+      Left = 12
+      Top = 78
+      Width = 97
+      Height = 17
+      Caption = 'OnHide'
+      TabOrder = 3
+    end
+    object chkErrorOnDestroy: TCheckBox
+      Left = 12
+      Top = 98
+      Width = 97
+      Height = 17
+      Caption = 'OnDestroy'
+      TabOrder = 4
+    end
+    object chkErrorOnShow: TCheckBox
+      Left = 12
+      Top = 21
+      Width = 97
+      Height = 17
+      Caption = 'OnShow'
+      TabOrder = 0
+    end
   end
 end

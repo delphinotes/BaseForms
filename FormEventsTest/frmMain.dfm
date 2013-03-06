@@ -12,6 +12,7 @@ object MainForm: TMainForm
   Font.Style = []
   OldCreateOrder = False
   Position = poScreenCenter
+  CloseByEscape = False
   DesignSize = (
     453
     263)
@@ -31,7 +32,7 @@ object MainForm: TMainForm
     Width = 75
     Height = 25
     Action = acShowEventsForm
-    TabOrder = 1
+    TabOrder = 3
   end
   object Button4: TButton
     Left = 7
@@ -39,7 +40,7 @@ object MainForm: TMainForm
     Width = 75
     Height = 25
     Action = acHideEventsForm
-    TabOrder = 2
+    TabOrder = 6
   end
   object Button5: TButton
     Left = 7
@@ -47,7 +48,7 @@ object MainForm: TMainForm
     Width = 75
     Height = 25
     Action = acDestroyEventsForm
-    TabOrder = 3
+    TabOrder = 7
   end
   object CheckBox1: TCheckBox
     Left = 12
@@ -55,7 +56,7 @@ object MainForm: TMainForm
     Width = 70
     Height = 17
     Action = acEventsFormVisible
-    TabOrder = 4
+    TabOrder = 1
   end
   object memBkLog: TMemo
     Left = 96
@@ -64,7 +65,7 @@ object MainForm: TMainForm
     Height = 214
     Anchors = [akLeft, akTop, akRight, akBottom]
     ScrollBars = ssVertical
-    TabOrder = 5
+    TabOrder = 10
   end
   object Button1: TButton
     Left = 7
@@ -72,7 +73,7 @@ object MainForm: TMainForm
     Width = 75
     Height = 25
     Action = acCloseEventsForm
-    TabOrder = 6
+    TabOrder = 5
   end
   object Button6: TButton
     Left = 7
@@ -80,7 +81,7 @@ object MainForm: TMainForm
     Width = 75
     Height = 25
     Action = acCloseQueryEventsForm
-    TabOrder = 7
+    TabOrder = 4
   end
   object btnClearEventsFormLog: TButton
     Left = 96
@@ -97,7 +98,7 @@ object MainForm: TMainForm
     Width = 75
     Height = 25
     Action = acShowModalEventsForm
-    TabOrder = 9
+    TabOrder = 2
   end
   object chkLogActivateEvents: TCheckBox
     Left = 184
@@ -105,7 +106,7 @@ object MainForm: TMainForm
     Width = 257
     Height = 17
     Caption = 'Log Activate/Deactivate Events'
-    TabOrder = 10
+    TabOrder = 9
   end
   object ActionList1: TActionList
     Left = 104
