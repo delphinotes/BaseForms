@@ -22,11 +22,11 @@ package BaseFormsDesign140;
 {$WRITEABLECONST OFF}
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
-{$DESCRIPTION 'DelphiNotes.ru Wizard for creating BaseForm and BaseFrame'}
-{$IMPLICITBUILD ON}
+{$DESCRIPTION 'delphinotes.ru Wizards for creating BaseDataModule, BaseForm and BaseFrame'}
+{$DESIGNONLY}
+{$IMPLICITBUILD OFF}
 
 requires
-  dcldb,
   designide;
 
 contains

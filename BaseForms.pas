@@ -31,6 +31,20 @@ type
   TBaseFrame = class;
   TBaseFrameClass = class of TBaseFrame;
 
+  { TBaseDataModule }
+
+  TBaseDataModule = class(TDataModule)
+  protected
+    FAutoFreeObjects: TObjectList;
+    procedure DoDestroy; override;
+    procedure ReadState(Reader: TReader); override;
+  public
+    function AutoFree(AObject: TObject): Pointer;
+  published
+    // помечаем OldCreateOrder как False по-умолчанию
+    property OldCreateOrder default False;
+  end;
+
   { TBaseForm }
 
   TBaseForm = class(TForm)
@@ -58,11 +72,21 @@ type
 
     // флаг автоматического уничтожения формы при закрытии
     property FreeOnClose: Boolean read FFreeOnClose write FFreeOnClose default False;
+
+    // стандартные свойства - добавляем дефолтовые значения, чтобы не сохранялись в dfm
+    property ParentFont default True;
+    property Color default clBtnFace;
+    // помечаем OldCreateOrder как False по-умолчанию
+    property OldCreateOrder default False;
+
   end;
 
   { TBaseFrame }
 
   TBaseFrame = class(TFrame)
+//  protected
+//    FAutoFreeObjects: TObjectList;
+//    procedure DoDestroy; override;
   end;
 
 implementation
@@ -104,12 +128,39 @@ begin
   end;
 end;
 
+type
+  TFriendlyReader = class(TReader);
+
+{ TBaseDataModule }
+
+procedure TBaseDataModule.DoDestroy;
+begin
+  inherited DoDestroy;
+  // destory auto free objects
+  FreeAndNil(FAutoFreeObjects);
+end;
+
+procedure TBaseDataModule.ReadState(Reader: TReader);
+begin
+  // пропускаем inherited, т.к. там устанавливается OldCreateOrder в False
+  TFriendlyReader(Reader).ReadData(Self);
+end;
+
+function TBaseDataModule.AutoFree(AObject: TObject): Pointer;
+begin
+  if not Assigned(FAutoFreeObjects) then
+    FAutoFreeObjects := TObjectList.Create;
+  FAutoFreeObjects.Add(AObject);
+  Result := AObject;
+end;
+
 { TBaseForm }
 
 procedure TBaseForm.InitializeNewForm;
 begin
   inherited InitializeNewForm;
   FCloseByEscape := True;
+  ParentFont := True;
 end;
 
 procedure TBaseForm.DoClose(var Action: TCloseAction);
@@ -207,5 +258,12 @@ begin
     RestoreFormsPositions;
   inherited;
 end;
+
+{ TBaseFrame }
+
+//procedure TBaseFrame.DoDestroy;
+//begin
+//  inherited DoDestroy;
+//end;
 
 end.

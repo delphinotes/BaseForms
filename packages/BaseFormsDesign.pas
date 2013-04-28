@@ -11,7 +11,7 @@ implementation
 uses
   BaseForms,
   Classes, SysUtils, Windows, Graphics,
-  DesignIntf, DesignEditors, ToolsApi, WCtlForm, TypInfo;
+  DesignIntf, DesignEditors, ToolsApi, TypInfo, DMForm, WCtlForm;
 
 { misc }
 
@@ -85,6 +85,15 @@ type
     // IOTAFormWizard
   end;
 
+  TBaseDataModuleWizard = class(TCustomBaseFormWizard)
+  protected
+    function ThisFormClass: TComponentClass; override;
+  public
+    function GetName: string; override;
+  end;
+
+  TBaseDataModuleModule = TDataModuleCustomModule;
+
   TBaseFormWizard = class(TCustomBaseFormWizard)
   protected
     function ThisFormClass: TComponentClass; override;
@@ -110,6 +119,9 @@ type
 
 procedure Register;
 begin
+  RegisterCustomModule(TBaseDataModule, TBaseDataModuleModule);
+  RegisterPackageWizard(TBaseDataModuleWizard.Create);
+
   RegisterCustomModule(TBaseForm, TBaseFormModule);
   RegisterPackageWizard(TBaseFormWizard.Create);
 
@@ -251,7 +263,7 @@ end;
 
 function TCustomBaseFormWizard.GetAuthor: string;
 begin
-  Result := 'DelphiNotes.ru';
+  Result := 'delphinotes.ru';
 end;
 
 function TCustomBaseFormWizard.GetComment: string;
@@ -293,7 +305,7 @@ end;
 
 function TCustomBaseFormWizard.GetIDString: string;
 begin
-  Result := 'DN.Create_' + ThisAncestorName + '.Wizard';
+  Result := 'DelphiNotes.New' + ThisAncestorName + '.Wizard';
 end;
 
 function TCustomBaseFormWizard.GetName: string;
@@ -318,6 +330,18 @@ begin
   AddUnitToUses(Module, ThisUnitName);
 end;
 
+{ TBaseDataModuleWizard }
+
+function TBaseDataModuleWizard.ThisFormClass: TComponentClass;
+begin
+  Result := TBaseDataModule;
+end;
+
+function TBaseDataModuleWizard.GetName: string;
+begin
+  Result := 'Base Data Module';
+end;
+
 { TBaseFormWizard }
 
 function TBaseFormWizard.ThisFormClass: TComponentClass;
@@ -327,7 +351,7 @@ end;
 
 function TBaseFormWizard.GetName: string;
 begin
-  Result := 'DN Base Form';
+  Result := 'Base Form';
 end;
 
 { TBaseFormModule }
@@ -353,7 +377,7 @@ end;
 
 function TBaseFrameWizard.GetName: string;
 begin
-  Result := 'DN Base Frame';
+  Result := 'Base Frame';
 end;
 
 end.

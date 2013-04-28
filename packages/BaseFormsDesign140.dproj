@@ -20,9 +20,10 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
 			<DCC_DcpOutput>bin</DCC_DcpOutput>
 			<DCC_DcuOutput>bin</DCC_DcuOutput>
-			<DesignOnlyPackage>false</DesignOnlyPackage>
+			<DesignOnlyPackage>true</DesignOnlyPackage>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;$(DCC_UnitAlias)</DCC_UnitAlias>
 			<DCC_DependencyCheckOutputName>..\..\..\..\..\Public\Documents\RAD Studio\7.0\Bpl\BaseFormsDesign140.bpl</DCC_DependencyCheckOutputName>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
@@ -30,7 +31,7 @@
 			<DCC_F>false</DCC_F>
 			<GenPackage>true</GenPackage>
 			<DCC_Platform>x86</DCC_Platform>
-			<DCC_Description>DelphiNotes.ru Wizard for creating BaseForm and BaseFrame</DCC_Description>
+			<DCC_Description>delphinotes.ru Wizards for creating BaseDataModule, BaseForm and BaseFrame</DCC_Description>
 			<DCC_N>false</DCC_N>
 			<DCC_S>false</DCC_S>
 			<GenDll>true</GenDll>
@@ -51,7 +52,6 @@
 			<DelphiCompile Include="BaseFormsDesign140.dpk">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="dcldb.dcp"/>
 			<DCCReference Include="designide.dcp"/>
 			<DCCReference Include="..\BaseForms.pas"/>
 			<DCCReference Include="BaseFormsDesign.pas"/>
@@ -68,6 +68,9 @@
 			</BuildConfiguration>
 		</ItemGroup>
 		<Import Project="$(BDS)\Bin\CodeGear.Delphi.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Delphi.Targets')"/>
+		<PropertyGroup>
+			<PreBuildEvent><![CDATA[regedit /s $(PROJECTDIR)\DeleteFromPackageCache.reg]]></PreBuildEvent>
+		</PropertyGroup>
 		<ProjectExtensions>
 			<Borland.Personality>Delphi.Personality.12</Borland.Personality>
 			<Borland.ProjectType>Package</Borland.ProjectType>
@@ -110,9 +113,7 @@
 						<VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys>
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
-					<Excluded_Packages>
-						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\7.0\Bpl\BaseFormsDesign140.bpl">TBaseForm and TBaseFrame, delphinotes.ru</Excluded_Packages>
-					</Excluded_Packages>
+					<Excluded_Packages/>
 				</Delphi.Personality>
 			</BorlandProject>
 			<ProjectFileVersion>12</ProjectFileVersion>
