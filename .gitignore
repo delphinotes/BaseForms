@@ -5,3 +5,6 @@ bin
 *.dcu
 *.cbk
 *.dsk
+*.cfg
+*.dof
+*.bak

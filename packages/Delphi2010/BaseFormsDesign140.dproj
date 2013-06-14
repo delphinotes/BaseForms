@@ -21,11 +21,10 @@
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
 			<DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
-			<DCC_DcpOutput>bin</DCC_DcpOutput>
 			<DCC_DcuOutput>bin</DCC_DcuOutput>
 			<DesignOnlyPackage>true</DesignOnlyPackage>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;$(DCC_UnitAlias)</DCC_UnitAlias>
-			<DCC_DependencyCheckOutputName>..\..\..\..\..\Public\Documents\RAD Studio\7.0\Bpl\BaseFormsDesign140.bpl</DCC_DependencyCheckOutputName>
+			<DCC_DependencyCheckOutputName>..\..\..\..\..\..\Public\Documents\RAD Studio\7.0\Bpl\BaseFormsDesign140.bpl</DCC_DependencyCheckOutputName>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
 			<DCC_K>false</DCC_K>
 			<DCC_F>false</DCC_F>
@@ -53,8 +52,8 @@
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
 			<DCCReference Include="designide.dcp"/>
-			<DCCReference Include="..\BaseForms.pas"/>
-			<DCCReference Include="BaseFormsDesign.pas"/>
+			<DCCReference Include="BaseFormsRun140.dcp"/>
+			<DCCReference Include="..\BaseFormsDesign.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>

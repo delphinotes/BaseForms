@@ -1,4 +1,4 @@
-package BaseFormsDesign140;
+package BaseFormsDesign70;
 
 {$R *.res}
 {$ALIGN 8}
@@ -27,10 +27,10 @@ package BaseFormsDesign140;
 {$IMPLICITBUILD OFF}
 
 requires
-  designide;
+  designide,
+  BaseFormsRun70;
 
 contains
-  BaseForms in '..\BaseForms.pas',
-  BaseFormsDesign in 'BaseFormsDesign.pas';
+  BaseFormsDesign in '..\BaseFormsDesign.pas';
 
 end.

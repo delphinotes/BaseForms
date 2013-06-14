@@ -2,6 +2,8 @@ unit BaseFormsDesign;
 
 interface
 
+{$i BaseForms.inc}
+
 procedure Register;
 
 implementation
@@ -25,7 +27,7 @@ var
   Buffer, P: PAnsiChar;
   StartPos: Integer;
 begin
-  Buffer := AnsiStrAlloc(UnitFileSize);
+  Buffer := {$IFDEF UNICODE}AnsiStrAlloc{$ELSE}StrAlloc{$ENDIF}(UnitFileSize);
   Editor := (Module.GetModuleFileEditor(0)) as IOTASourceEditor;
   try
     Reader := Editor.CreateReader;
@@ -58,8 +60,8 @@ end;
 
 { TCustomBaseFormWizard }
 type
-  TCustomBaseFormWizard = class(TNotifierObject, IOTARepositoryWizard, IOTARepositoryWizard60, IOTARepositoryWizard80,
-                            IOTAWizard, IOTAProjectWizard, IOTAFormWizard)
+  TCustomBaseFormWizard = class(TNotifierObject, IOTARepositoryWizard, IOTARepositoryWizard60,
+    {$ifdef DELPHI8_UP}IOTARepositoryWizard80,{$endif} IOTAWizard, IOTAProjectWizard, IOTAFormWizard)
   protected
     function ThisFormClass: TComponentClass; virtual; abstract;
     function ThisUnitName: string;
@@ -73,9 +75,11 @@ type
     function GetGlyph: Cardinal;
     // IOTARepositoryWizard60
     function GetDesigner: string;
+    {$ifdef DELPHI8_UP}
     // IOTARepositoryWizard80
     function GetGalleryCategory: IOTAGalleryCategory;
     function GetPersonality: string;
+    {$endif}
     // IOTAWizard
     function GetIDString: string;
     function GetName: string; virtual;
@@ -286,6 +290,7 @@ begin
   Result := dVCL;
 end;
 
+{$ifdef DELPHI8_UP}
 function TCustomBaseFormWizard.GetGalleryCategory: IOTAGalleryCategory;
 var
   Category: IOTAGalleryCategory;
@@ -302,6 +307,7 @@ function TCustomBaseFormWizard.GetPersonality: string;
 begin
   Result := sDelphiPersonality;
 end;
+{$endif}
 
 function TCustomBaseFormWizard.GetIDString: string;
 begin

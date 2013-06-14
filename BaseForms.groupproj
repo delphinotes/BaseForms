@@ -12,6 +12,9 @@
 			<Projects Include="FormEventsTest\FormEvents.dproj">
 				<Dependencies/>
 			</Projects>
+			<Projects Include="packages\BaseFormsRun140.dproj">
+				<Dependencies/>
+			</Projects>
 		</ItemGroup>
 		<ProjectExtensions>
 			<Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -47,14 +50,23 @@
 		<Target Name="FormEvents:Make">
 			<MSBuild Targets="Make" Projects="FormEventsTest\FormEvents.dproj"/>
 		</Target>
+		<Target Name="BaseFormsRun140">
+			<MSBuild Projects="packages\BaseFormsRun140.dproj"/>
+		</Target>
+		<Target Name="BaseFormsRun140:Clean">
+			<MSBuild Targets="Clean" Projects="packages\BaseFormsRun140.dproj"/>
+		</Target>
+		<Target Name="BaseFormsRun140:Make">
+			<MSBuild Targets="Make" Projects="packages\BaseFormsRun140.dproj"/>
+		</Target>
 		<Target Name="Build">
-			<CallTarget Targets="BaseFormsDesign140;BaseFormsTest;FormEvents"/>
+			<CallTarget Targets="BaseFormsDesign140;BaseFormsTest;FormEvents;BaseFormsRun140"/>
 		</Target>
 		<Target Name="Clean">
-			<CallTarget Targets="BaseFormsDesign140:Clean;BaseFormsTest:Clean;FormEvents:Clean"/>
+			<CallTarget Targets="BaseFormsDesign140:Clean;BaseFormsTest:Clean;FormEvents:Clean;BaseFormsRun140:Clean"/>
 		</Target>
 		<Target Name="Make">
-			<CallTarget Targets="BaseFormsDesign140:Make;BaseFormsTest:Make;FormEvents:Make"/>
+			<CallTarget Targets="BaseFormsDesign140:Make;BaseFormsTest:Make;FormEvents:Make;BaseFormsRun140:Make"/>
 		</Target>
 		<Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 	</Project>
