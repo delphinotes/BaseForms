@@ -83,7 +83,7 @@ type
     FAutoFreeOnHide: TObjectList;
     FAutoFreeOnDestroy: TObjectList;
 
-    procedure InitializeNewForm; {$ifdef TCustomForm.InitializeNewForm}override;{$else}virtual;{$endif}
+    procedure InitializeNewForm; {$ifdef TCustomForm.InitializeNewForm}override;{$else}dynamic;{$endif}
     procedure DoClose(var Action: TCloseAction); override;
     procedure DoHide; override;
     procedure DoDestroy; override;
@@ -141,7 +141,7 @@ function ResGet(const Section, StringID: string; const DefaultValue: string = ''
 {.$endregion}
 
 {.$region 'ScaleControl'}
-// ScaleControl - масштабирует контрол, его шрифт, констрейнты и его дочерние (если есть) - рекурсивно
+// ScaleControl - scales control, its font, constraints, margins, scrollbars and its childs (if any) - recursively
 procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer); overload;
 procedure ScaleControl(Control: TControl; M, D: Integer); overload;
 {.$endregion}
@@ -207,7 +207,7 @@ end;
 procedure LocalizeRootComponent(Instance: TComponent);
 begin
   // Call Localizer to Localize (Translate) Instance
-  {$MESSAGE HINT 'sorry, not implemented yet'}
+  {.$MESSAGE HINT 'sorry, not implemented yet'}
   // TODO: do this
 
 
@@ -228,7 +228,7 @@ end;
 
 function ResGet(const Section, StringID: string; const DefaultValue: string = ''): string;
 begin
-  {$MESSAGE HINT 'sorry, not implemented yet'}
+  {.$MESSAGE HINT 'sorry, not implemented yet'}
   // TODO: do this
   Result := DefaultValue;
 end;
@@ -237,30 +237,7 @@ end;
 
 {.$region 'ScaleControl'}
 procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer);
-  procedure ScaleScrollBars(Control: TScrollingWinControl);
-  begin
-    with THackScrollingWinControl(Control) do
-    begin
-      // ScaleScrollBars
-      if not FAutoScroll then
-      begin
-        //with FHorzScrollBar do if FScaled then Range := MulDiv(Range, MX, DX);
-        //with FVertScrollBar do if FScaled then Range := MulDiv(Range, MY, DY);
-        with FHorzScrollBar do
-        begin
-          Position := 0;
-          Range := MulDiv(Range, MX, DX);
-        end;
-        with FVertScrollBar do
-        begin
-          Position := 0;
-          Range := MulDiv(Range, MY, DY);
-        end;
-      end;
-    end;
-  end;
-
-  procedure ScaleConstraints(Control: TControl);
+  procedure ScaleControlConstraints(Control: TControl);
   begin
     with THackSizeConstraints(Control.Constraints) do
     begin
@@ -269,35 +246,11 @@ procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer);
       FMinHeight := MulDiv(FMinHeight, MY, DY);
       FMinWidth := MulDiv(FMinWidth, MX, DX);
     end;
-    //TFriendlySizeConstraints(Constraints).Change;
-  end;
-
-  procedure ScaleFormConstraints(Control: TControl; cdx, cdy: Integer);
-    procedure ScaleValue(var Value: TConstraintSize; M, D, s, c: Integer);
-    var
-      tmp: Integer;
-    begin
-      if Value > 0 then
-      begin
-        tmp := MulDiv(Value - s, M, D) + c;
-        if tmp < 0
-          then Value := 0
-          else Value := tmp;
-      end;
-    end;
-  begin
-    with THackSizeConstraints(Control.Constraints) do
-    begin
-      ScaleValue(FMaxWidth, MX, DX, cdx, cdx);
-      ScaleValue(FMinWidth, MX, DX, cdx, cdx);
-      ScaleValue(FMaxHeight, MY, DY, cdy, cdy);
-      ScaleValue(FMinHeight, MY, DY, cdy, cdy);
-    end;
-    //TFriendlySizeConstraints(Constraints).Change;
+    //TFriendlySizeConstraints(Control.Constraints).Change;
   end;
 
   {$ifdef Controls.TMargins}
-  procedure ScaleMargins(Control: TControl);
+  procedure ScaleControlMargins(Control: TControl);
   begin
     with THackMargins(Control.Margins) do
     begin
@@ -306,20 +259,11 @@ procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer);
       FRight := MulDiv(FRight, MX, DX);
       FBottom := MulDiv(FBottom, MY, DY);
     end;
-    //TFriendlyMargins(Margins).Change;
+    //TFriendlyMargins(Control.Margins).Change;
   end;
   {$endif}
 
-  procedure ScaleControls(Control: TWinControl);
-  var
-    i: Integer;
-  begin
-    with Control do
-      for i := 0 to ControlCount - 1 do
-        ScaleControl(Controls[i], MX, DX, MY, DY, MF, DF);
-  end;
-
-  procedure ChangeControlScale(Control: TControl);
+  procedure ScaleControl(Control: TControl);
   var
     L, T, W, H: Integer;
   begin
@@ -339,22 +283,13 @@ procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer);
         H := MulDiv(Top + Height, MY, DY) - T
       else
         H := Height;
-
-      // scale Constraints
-      ScaleConstraints(Control);
-
-      {$ifdef Controls.TMargins}
-      // scale Margins
-      with THackMargins(Margins) do
-      begin
-        FLeft := MulDiv(FLeft, MX, DX);
-        FTop := MulDiv(FTop, MY, DY);
-        FRight := MulDiv(FRight, MX, DX);
-        FBottom := MulDiv(FBottom, MY, DY);
-      end;
-      //TFriendlyMargins(Margins).Change;
-      {$endif}
     end;
+
+    ScaleControlConstraints(Control);
+
+    {$ifdef Controls.TMargins}
+    ScaleControlMargins(Control);
+    {$endif}
 
     {$ifdef bf_tb2k}
     // scale TTBToolWindow
@@ -368,7 +303,7 @@ procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer);
       end;
     {$endif}
 
-    // Применение новых размеров с учётом констрейнтов
+    // apply new bounds (with check constraints and margins)
     Control.SetBounds(L, T, W, H);
 
     with THackControl(Control), TFriendlyControl(Control) do
@@ -383,19 +318,18 @@ procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer);
     end;
   end;
 
-  procedure ChangeWinControlScale(WinControl: TWinControl);
+  procedure ScaleWinControlDesignSize(WinControl: TWinControl);
   begin
-    ChangeControlScale(WinControl);
-
-    // scale DesignSize
-    with TFiendlyWinControl(WinControl) do
+    with TFriendlyWinControl(WinControl) do
     begin
       FDesignSize.X := MulDiv(FDesignSize.X, MX, DX);
       FDesignSize.Y := MulDiv(FDesignSize.Y, MY, DY);
     end;
+  end;
 
-    {$ifdef Controls.TPadding}
-    // scale Padding
+  {$ifdef Controls.TPadding}
+  procedure ScaleWinControlPadding(WinControl: TWinControl);
+  begin
     with THackPadding(WinControl.Padding) do
     begin
       FLeft := MulDiv(FLeft, MX, DX);
@@ -404,83 +338,149 @@ procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer);
       FBottom := MulDiv(FBottom, MY, DY);
     end;
     TFriendlyPadding(WinControl.Padding).Change;
+  end;
+  {$endif}
+
+  procedure ScaleWinControl(WinControl: TWinControl);
+  begin
+    ScaleControl(WinControl);
+
+    ScaleWinControlDesignSize(WinControl);
+
+    {$ifdef Controls.TPadding}
+    ScaleWinControlPadding(WinControl);
     {$endif}
   end;
 
-  procedure ChangeScrollingWinControl(Control: TScrollingWinControl);
+  procedure ScaleScrollBars(Control: TScrollingWinControl);
   begin
-    ScaleScrollBars(Control);
-    ChangeWinControlScale(Control);
+    with TFriendlyScrollingWinControl(Control) do
+    begin
+      if not AutoScroll then
+      begin
+        with HorzScrollBar do
+        begin
+          Position := 0;
+          Range := MulDiv(Range, MX, DX);
+        end;
+        with VertScrollBar do
+        begin
+          Position := 0;
+          Range := MulDiv(Range, MY, DY);
+        end;
+      end;
+    end;
   end;
 
-  procedure ChangeFormScale(Form: TCustomForm);
+  procedure ScaleScrollingWinControl(ScrollingWinControl: TScrollingWinControl);
+  begin
+    ScaleScrollBars(ScrollingWinControl);
+    ScaleWinControl(ScrollingWinControl);
+  end;
+
+  procedure ScaleCustomFormConstraints(CustomForm: TCustomForm; cdx, cdy: Integer);
+    procedure ScaleValue(var Value: TConstraintSize; M, D, s: Integer);
+    var
+      tmp: Integer;
+    begin
+      if Value > 0 then
+      begin
+        tmp := MulDiv(Value - s, M, D) + s;
+        if tmp < 0
+          then Value := 0
+          else Value := tmp;
+      end;
+    end;
+  begin
+    // при масштабировании констрейнтов формы, надо учитывать
+    // разницу между внешними размерами и размерами клиентской области
+    with THackSizeConstraints(CustomForm.Constraints) do
+    begin
+      ScaleValue(FMaxWidth, MX, DX, cdx);
+      ScaleValue(FMinWidth, MX, DX, cdx);
+      ScaleValue(FMaxHeight, MY, DY, cdy);
+      ScaleValue(FMinHeight, MY, DY, cdy);
+    end;
+    //TFriendlySizeConstraints(Constraints).Change;
+  end;
+
+  procedure ScaleCustomForm(CustomForm: TCustomForm);
   var
     W, H: Integer;
     cdx, cdy: Integer;
   begin
-    cdx := Form.Width - Form.ClientWidth;
-    cdy := Form.Height - Form.ClientHeight;
-
-    with THackCustomForm(Form), THackControl(Form), TFriendlyControl(Form) do
+    with CustomForm do
     begin
-      if (MF <> DF) then
-        Form.Font.Height := MulDiv(Form.Font.Height, MF, DF);
+      cdx := Width - ClientWidth;
+      cdy := Height - ClientHeight;
+
+      if MF <> DF then
+        Font.Height := MulDiv(Font.Height, MF, DF);
 
       W := MulDiv(ClientWidth, MX, DX) + cdx;
       H := MulDiv(ClientHeight, MY, DY) + cdy;
-
-      FDesignSize.X := MulDiv(FDesignSize.X, MX, DX);
-      FDesignSize.Y := MulDiv(FDesignSize.Y, MY, DY);
-
-      ScaleScrollBars(Form);
-
-      // при масштабировании констрейнтов формы, надо учитывать
-      // разницу между внешними размерами и размерами клиентской области
-      ScaleFormConstraints(Form, cdx, cdy);
-
-      if DX > MX then
-        inc(W);
-      if DY > MY then
-        inc(H);
-      SetBounds(FLeft, FTop, W, H);
     end;
+
+    ScaleWinControlDesignSize(CustomForm);
+
+    ScaleScrollBars(CustomForm);
+
+    ScaleCustomFormConstraints(CustomForm, cdx, cdy);
+
+    // При уменьшении размера иногда (пока не разбирался почему) новые размеры не применяются
+    // Наращивание ширины и высоты на 1 пиксель помогает обойти такую проблему
+    if DX > MX then
+      inc(W);
+    if DY > MY then
+      inc(H);
+
+    // apply new bounds (with check constraints and margins)
+    with CustomForm do
+      SetBounds(Left, Top, W, H);
   end;
 
-var
-  SavedAnchors: array of TAnchors;
-  i: Integer;
+  procedure ScaleAndAlignWinControl(WinControl: TWinControl);
+  var
+    SavedAnchors: array of TAnchors;
+    i: Integer;
+  begin
+    with WinControl do
+    begin
+      // disable anchors of child controls:
+      SetLength(SavedAnchors, ControlCount);
+      for i := 0 to ControlCount - 1 do
+      begin
+        SavedAnchors[i] := Controls[i].Anchors;
+        Controls[i].Anchors := [akLeft, akTop];
+      end;
+
+      DisableAlign;
+      try
+        // scale itself:
+        if WinControl is TCustomForm then
+          ScaleCustomForm(TCustomForm(WinControl))
+        else if WinControl is TScrollingWinControl then
+          ScaleScrollingWinControl(TScrollingWinControl(WinControl))
+        else
+          ScaleWinControl(WinControl);
+
+        // scale child controls:
+        for i := 0 to ControlCount - 1 do
+          BaseForms.ScaleControl(Controls[i], MX, DX, MY, DY, MF, DF);
+      finally
+        EnableAlign;
+
+        // enable anchors of child controls:
+        for i := 0 to ControlCount - 1 do
+          Controls[i].Anchors := SavedAnchors[i];
+      end;
+    end;
+  end;
 begin
   if Control is TWinControl then
-  with TWinControl(Control) do
-  begin
-    // DisableAnchors:
-    SetLength(SavedAnchors, ControlCount);
-    for i := 0 to ControlCount - 1 do
-    begin
-      SavedAnchors[i] := Controls[i].Anchors;
-      Controls[i].Anchors := [akLeft, akTop];
-    end;
-
-    DisableAlign;
-    try
-      if Control is TCustomForm then
-        ChangeFormScale(TCustomForm(Control))
-      else if Control is TScrollingWinControl then
-        ChangeScrollingWinControl(TScrollingWinControl(Control))
-      else
-        ChangeWinControlScale(TWinControl(Control));
-
-      // ScaleControls
-      ScaleControls(TWinControl(Control))
-    finally
-      EnableAlign;
-
-      // EnableAnchors:
-      for i := 0 to ControlCount - 1 do
-        Controls[i].Anchors := SavedAnchors[i];
-    end;
-  end else
-    ChangeControlScale(Control);
+    ScaleAndAlignWinControl(TWinControl(Control))
+  else
+    ScaleControl(Control);
 end;
 
 procedure ScaleControl(Control: TControl; M, D: Integer);
@@ -558,58 +558,7 @@ begin
 end;
 {$endif}
 
-
 {$ifdef Allow.ScaleFix}
-// Проблема масштабирования VCL: если в dfm не сохраняются
-// параметры ClientWidth и ClientHeight (а не сохраниться они могут при различных
-// сочетаниях свойств AutoScroll, BorderStyle),
-// то в методе TCustomForm.ReadState не происходит коррекция клиентской области
-// окна, что приводит к следующему: все контролы масштабируются, а окно - нет.
-// В обычных случаях это не страшно, но если на форме есть контролы с якорями
-// по правому и/или нижнему краям, то они выезжают за край формы.
-// Кроме того, VCL (в старых версиях) не масштабирует Constraints.
-
-// Пока придумал такое решение: в dfm ВСЕГДА сохраняем ClientWidth и ClientHeight.
-
-// В будущем можно будет также сохранять дополнительное свойство,
-// которое не будет в себе нести никакой смысловой нагрузки, но зато
-// позволит управлять шрифтом формы сразу после считывания его из ресурсов.
-// Для этого надо раскомментить ReadScaleFix и связанные.
-
-
-// TODO: ещё одна проблема: VCL не масштабирует фреймы, созданные в рантайме
-//
-//  можно попытаться сделать так: запретить VCL масштабировать, т.е. в dfm всегда
-//  сохранять Scalled = False;
-//  а на уровне BaseFrame и BaseForm уже масштабировать как надо.
-
-
-//TODO: такая задумка: можно масштабировать, если в ini указан нестандаартный размер шрифта.
-//          Только тут возникают проблемы: не масштабируются размеры строк в таблицах,
-//          не масштабируются рисунки, и некоторые другие вещи.
-
-{procedure TBaseForm.ReadScaleFix(Reader: TReader);
-begin
-  Reader.ReadInteger;
-
-  if not (csDesigning in ComponentState) then
-  begin
-    if (Reader.Root <> nil) and (Reader.Root.ClassType = Self.ClassType) then
-    begin
-      // save readed PixelsPerInch from DFM
-      FPPI := THackCustomForm(Self).FPixelsPerInch;
-
-      // and reset it, for disable scale on VCL level
-      THackCustomForm(Self).FPixelsPerInch := 0;
-    end;
-  end;
-end;}
-
-//function TBaseForm.GetTextHeight: Integer;
-//begin
-//  Result := Canvas.TextHeight('0');
-//end;
-
 procedure TBaseForm.WriteClientHeight(Writer: TWriter);
 begin
   Writer.WriteInteger(ClientHeight);
@@ -636,7 +585,7 @@ begin
   // and set current value
   THackCustomForm(Self).FPixelsPerInch := Screen.PixelsPerInch;
 
-  // and reset TextHeight, for disable scale on VCL level
+  // reset TextHeight, for disable scale on VCL level
   THackCustomForm(Self).FTextHeight := 0;
 end;
 
@@ -681,7 +630,6 @@ begin
 
   inherited Loaded;
 end;
-{ /fix_vcl_scale_bug }
 {$endif}
 
 procedure TBaseForm.InitializeNewForm;

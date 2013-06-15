@@ -12,10 +12,10 @@
 
 
 // Allow use .OnLocalize event and ResGet Method
-{-$define Allow.Localization}
+{.$define Allow.Localization}
 
+// ScaleFix - http://www.delphinotes.ru/2013/06/vcl-form-and-frame-scale-fix.html
 {$define Allow.ScaleFix}
-
 
 // define, if using tb2k components
 {.$define bf_tb2k}

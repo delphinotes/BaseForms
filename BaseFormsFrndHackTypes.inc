@@ -1,27 +1,14 @@
 {$HINTS OFF}
 type
+  // Classes.pas
   TFriendlyReader = class(TReader);
 
-  THackScreen = class(TComponent)
-  // work with: Delphi 7, Delphi 2010
-  {$ifdef DELPHIXE_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
-  private
-    FFonts: TStrings;
-    FImes: TStrings;
-    FDefaultIme: string;
-    FDefaultKbLayout: HKL;
-    FPixelsPerInch: Integer;
-    FCursor: TCursor;
-    FCursorCount: Integer;
-    FForms: TList;
-    FCustomForms: TList;
-  end;
-
+  // Controls.pas
   TFriendlySizeConstraints = class(TSizeConstraints);
 
   THackSizeConstraints = class(TPersistent)
-  // work with: Delphi 7, Delphi 2010
-  {$ifdef DELPHIXE_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
+  // it works with: Delphi 7, Delphi 2010, Delphi XE, Delphi XE2
+  {$ifdef DELPHIXE3_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
   private
     FControl: TControl;
     FMaxHeight: TConstraintSize;
@@ -34,6 +21,8 @@ type
   TFriendlyMargins = class(TMargins);
 
   THackMargins = class(TPersistent)
+  // it works with: Delphi 2010, Delphi XE, Delphi XE2
+  {$ifdef DELPHIXE3_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
   private
     FControl: TControl;
     FLeft, FTop, FRight, FBottom: TMarginSize;
@@ -50,9 +39,46 @@ type
 
   THackControl = class(TComponent)
   private
-  {$ifdef DELPHI2010_UP}
-  // work with: Delphi 2010
-    {$ifdef DELPHIXE_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
+  {$ifdef DELPHIXE2_UP}
+  // it works with Delphi XE2
+    {$ifdef DELPHIXE3_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
+    FParent: TWinControl;
+    FWindowProc: TWndMethod;
+    FLeft: Integer;
+    FTop: Integer;
+    FWidth: Integer;
+    FHeight: Integer;
+    FControlStyle: TControlStyle;
+    FControlState: TControlState;
+    FDesktopFont: Boolean;
+    FVisible: Boolean;
+    FEnabled: Boolean;
+    FParentFont: Boolean;
+    FParentColor: Boolean;
+    FAlign: TAlign;
+    FAutoSize: Boolean;
+    FDragMode: TDragMode;
+    FIsControl: Boolean;
+    FBiDiMode: TBiDiMode;
+    FParentBiDiMode: Boolean;
+    FAnchors: TAnchors;
+    FFont: TFont;
+    FActionLink: TControlActionLink;
+    FColor: TColor;
+    FConstraints: TSizeConstraints;
+    FMargins: TMargins;
+    FCursor: TCursor;
+    FDragCursor: TCursor;
+    FPopupMenu: TObject;//TPopupMenu;
+    FHint: string;
+    FFontHeight: Integer;
+    FScalingFlags: TScalingFlags;
+    FShowHint: Boolean;
+    FParentShowHint: Boolean;
+  {$endif}
+  {$ifdef DELPHIXE}{$MESSAGE WARN 'sorry, not implemented'}{$endif}
+  {$ifdef DELPHI2010}
+  // it works with Delphi 2010
     FParent: TWinControl;
     FWindowProc: TWndMethod;
     FLeft: Integer;
@@ -90,7 +116,7 @@ type
     FParentShowHint: Boolean;
   {$endif}
   {$ifdef DELPHI7}
-  // work with: Delphi 7
+  // it works with Delphi 7
     FParent: TWinControl;
     FWindowProc: TWndMethod;
     FLeft: Integer;
@@ -130,13 +156,35 @@ type
   {$endif}
   end;
 
-  TFiendlyWinControl = class(TWinControl);
+  TFriendlyWinControl = class(TWinControl);
 
+  // Forms.pas
+
+(*
+  THackScreen = class(TComponent)
+  // it works with: Delphi 7, Delphi 2010, Delphi XE, Delphi XE2
+  {$ifdef DELPHIXE3_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
+  private
+    FFonts: TStrings;
+    FImes: TStrings;
+    FDefaultIme: string;
+    FDefaultKbLayout: HKL;
+    FPixelsPerInch: Integer;
+    FCursor: TCursor;
+    FCursorCount: Integer;
+    FForms: TList;
+    FCustomForms: TList;
+  end;
+*)
+
+  TFriendlyScrollingWinControl = class(TScrollingWinControl);
+
+(*
   THackScrollingWinControl = class(TWinControl)
   private
   {$ifdef DELPHI2010_UP}
-    {$ifdef DELPHIXE_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
-    // work with: Delphi 2010
+    {$ifdef DELPHIXE3_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
+    // it works with: Delphi 2010, Delphi XE, Delphi XE2
     FAutoRangeCount: Integer;
     FAutoScroll: Boolean;
     FHorzScrollBar: TControlScrollBar;
@@ -145,18 +193,19 @@ type
     FVertScrollBar: TControlScrollBar;
   {$endif}
   {$ifdef DELPHI7}
-    // work with: Delphi 7
+    // it works with Delphi 7
     FHorzScrollBar: TControlScrollBar;
     FVertScrollBar: TControlScrollBar;
     FAutoScroll: Boolean;
   {$endif}
   end;
+*)
 
   THackCustomForm = class(TScrollingWinControl)
   private
   {$ifdef DELPHI2010_UP}
-    {$ifdef DELPHIXE_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
-    // work with: Delphi 2010
+    {$ifdef DELPHIXE3_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
+    // work with: Delphi 2010, Delphi XE, Delphi XE2
     FActiveControl: TWinControl;
     FFocusedControl: TWinControl;
     FBorderIcons: TBorderIcons;

@@ -1,0 +1,48 @@
+﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+		<PropertyGroup>
+			<ProjectGuid>{B29C0C4F-379A-48DE-AD9E-322A62925C6B}</ProjectGuid>
+		</PropertyGroup>
+		<ItemGroup>
+			<Projects Include="BaseFormsRun160.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="BaseFormsDesign160.dproj">
+				<Dependencies/>
+			</Projects>
+		</ItemGroup>
+		<ProjectExtensions>
+			<Borland.Personality>Default.Personality.12</Borland.Personality>
+			<Borland.ProjectType/>
+			<BorlandProject>
+				<Default.Personality/>
+			</BorlandProject>
+		</ProjectExtensions>
+		<Target Name="BaseFormsRun160">
+			<MSBuild Projects="BaseFormsRun160.dproj"/>
+		</Target>
+		<Target Name="BaseFormsRun160:Clean">
+			<MSBuild Projects="BaseFormsRun160.dproj" Targets="Clean"/>
+		</Target>
+		<Target Name="BaseFormsRun160:Make">
+			<MSBuild Projects="BaseFormsRun160.dproj" Targets="Make"/>
+		</Target>
+		<Target Name="BaseFormsDesign160">
+			<MSBuild Projects="BaseFormsDesign160.dproj"/>
+		</Target>
+		<Target Name="BaseFormsDesign160:Clean">
+			<MSBuild Projects="BaseFormsDesign160.dproj" Targets="Clean"/>
+		</Target>
+		<Target Name="BaseFormsDesign160:Make">
+			<MSBuild Projects="BaseFormsDesign160.dproj" Targets="Make"/>
+		</Target>
+		<Target Name="Build">
+			<CallTarget Targets="BaseFormsRun160;BaseFormsDesign160"/>
+		</Target>
+		<Target Name="Clean">
+			<CallTarget Targets="BaseFormsRun160:Clean;BaseFormsDesign160:Clean"/>
+		</Target>
+		<Target Name="Make">
+			<CallTarget Targets="BaseFormsRun160:Make;BaseFormsDesign160:Make"/>
+		</Target>
+		<Import Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')" Project="$(BDS)\Bin\CodeGear.Group.Targets"/>
+	</Project>

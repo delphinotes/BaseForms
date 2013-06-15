@@ -61,7 +61,9 @@ end;
 { TCustomBaseFormWizard }
 type
   TCustomBaseFormWizard = class(TNotifierObject, IOTARepositoryWizard, IOTARepositoryWizard60,
-    {$ifdef DELPHI8_UP}IOTARepositoryWizard80,{$endif} IOTAWizard, IOTAProjectWizard, IOTAFormWizard)
+    {$ifdef DELPHI8_UP}IOTARepositoryWizard80,{$endif}
+    {$ifdef DELPHI16_UP}IOTARepositoryWizard160,{$endif}
+    IOTAWizard, IOTAProjectWizard, IOTAFormWizard)
   protected
     function ThisFormClass: TComponentClass; virtual; abstract;
     function ThisUnitName: string;
@@ -79,6 +81,11 @@ type
     // IOTARepositoryWizard80
     function GetGalleryCategory: IOTAGalleryCategory;
     function GetPersonality: string;
+    {$endif}
+    {$ifdef DELPHI16_UP}
+    // IOTARepositoryWizard160
+    function GetFrameworkTypes: TArray<string>;
+    function GetPlatforms: TArray<string>;
     {$endif}
     // IOTAWizard
     function GetIDString: string;
@@ -306,6 +313,20 @@ end;
 function TCustomBaseFormWizard.GetPersonality: string;
 begin
   Result := sDelphiPersonality;
+end;
+{$endif}
+
+{$ifdef DELPHI16_UP}
+function TCustomBaseFormWizard.GetFrameworkTypes: TArray<string>;
+begin
+  SetLength(Result, 1);
+  Result[0] := sFrameworkTypeVCL;
+end;
+
+function TCustomBaseFormWizard.GetPlatforms: TArray<string>;
+begin
+  SetLength(Result, 1);
+  Result[0] := 'Win32';
 end;
 {$endif}
 
