@@ -279,5 +279,10 @@ type
   end;
 
   TFriendlyCustomLabel = class(TCustomLabel);
+
+  {$ifdef bf_Grids}
+  // Grids.pas
+  TFriendlyCustomGrid = class(TCustomGrid);
+  {$endif}
 {$HINTS ON}
 

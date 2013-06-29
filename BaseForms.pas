@@ -55,26 +55,24 @@ type
 
   TBaseForm = class(TForm)
   {$i BaseFormsLocalizeIntf.inc}
-  {$ifdef Allow.ScaleFix}
-  private
-    FPixelsPerInch: Integer;
-    procedure WriteClientHeight(Writer: TWriter);
-    procedure WriteClientWidth(Writer: TWriter);
-    procedure WriteScaleFix(Writer: TWriter);
-    procedure ReadScaleFix(Reader: TReader);
-  protected
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure Loaded; override;
-  {$endif}
   //published
     // наследуемые свойства:
     //property AutoScroll default False;
     //property Position default poScreenCenter;
     //property ShowHint default True;
   private
+    {$ifdef Allow.ScaleFix}
+    FPixelsPerInch: Integer;
+    {$endif}
     FCloseByEscape: Boolean;
     FFreeOnClose: Boolean;
 
+    procedure WriteClientHeight(Writer: TWriter);
+    procedure WriteClientWidth(Writer: TWriter);
+    {$ifdef Allow.ScaleFix}
+    procedure WriteScaleFix(Writer: TWriter);
+    {$endif}
+    procedure ReadScaleFix(Reader: TReader);
     procedure CMDialogKey(var Message: TCMDialogKey); message CM_DIALOGKEY;
     procedure WMSetIcon(var Message: TWMSetIcon); message WM_SETICON;
     procedure WMSysCommand(var Message: TWMSysCommand); message WM_SYSCOMMAND;
@@ -84,9 +82,11 @@ type
     FAutoFreeOnDestroy: TObjectList;
 
     procedure InitializeNewForm; {$ifdef TCustomForm.InitializeNewForm}override;{$else}dynamic;{$endif}
+    procedure DefineProperties(Filer: TFiler); override;
     procedure DoClose(var Action: TCloseAction); override;
     procedure DoHide; override;
     procedure DoDestroy; override;
+    procedure Loaded; override;
   public
     {$ifndef TCustomForm.InitializeNewForm}
     constructor CreateNew(AOwner: TComponent; Dummy: Integer = 0); override;
@@ -112,15 +112,16 @@ type
 //  protected
 //    FAutoFreeObjects: TObjectList;
 //    procedure DoDestroy; override;
-  {$ifdef Allow.ScaleFix}
   private
+    {$ifdef Allow.ScaleFix}
     FPixelsPerInch: Integer;
     procedure WritePixelsPerInch(Writer: TWriter);
+    {$endif}
     procedure ReadPixelsPerInch(Reader: TReader);
+
   protected
     procedure DefineProperties(Filer: TFiler); override;
     procedure Loaded; override;
-  {$endif}
   published
     // standart properties - add the 'default' to not saved in dfm
     property Left default 0;
@@ -152,6 +153,9 @@ implementation
 uses
   {$ifdef bf_tb2k}
   TB2ToolWindow,
+  {$endif}
+  {$ifdef bf_Grids}
+  Grids,
   {$endif}
   StdCtrls;
 
@@ -263,6 +267,24 @@ procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer);
   end;
   {$endif}
 
+  {$ifdef bf_Grids}
+  procedure ScaleCustomGrid(CustomGrid: TCustomGrid);
+  var
+    i: Integer;
+  begin
+    with TFriendlyCustomGrid(CustomGrid) do
+    begin
+      for i := 0 to ColCount - 1 do
+        ColWidths[i] := MulDiv(ColWidths[i], MX, DX);
+      DefaultColWidth := MulDiv(DefaultColWidth, MX, DX);
+
+      for i := 0 to RowCount - 1 do
+        RowHeights[i] := MulDiv(RowHeights[i], MY, DY);
+      DefaultRowHeight := MulDiv(DefaultRowHeight, MY, DY);
+    end;
+  end;
+  {$endif}
+
   procedure ScaleControl(Control: TControl);
   var
     L, T, W, H: Integer;
@@ -301,6 +323,11 @@ procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer);
         MinClientHeight := MulDiv(MinClientHeight, MY, DY);
         MinClientWidth := MulDiv(MinClientWidth, MX, DX);
       end;
+    {$endif}
+
+    {$ifdef bf_Grids}
+    if Control is TCustomGrid then
+      ScaleCustomGrid(TCustomGrid(Control));
     {$endif}
 
     // apply new bounds (with check constraints and margins)
@@ -558,7 +585,6 @@ begin
 end;
 {$endif}
 
-{$ifdef Allow.ScaleFix}
 procedure TBaseForm.WriteClientHeight(Writer: TWriter);
 begin
   Writer.WriteInteger(ClientHeight);
@@ -569,17 +595,20 @@ begin
   Writer.WriteInteger(ClientWidth);
 end;
 
+{$ifdef Allow.ScaleFix}
 procedure TBaseForm.WriteScaleFix(Writer: TWriter);
 begin
   // just save flag to DFM for disable VCL scale on ReadState
   Writer.WriteBoolean(True);
 end;
+{$endif}
 
 procedure TBaseForm.ReadScaleFix(Reader: TReader);
 begin
   if not Reader.ReadBoolean then
     Exit;
 
+  {$ifdef Allow.ScaleFix}
   // save readed PixelsPerInch from DFM
   FPixelsPerInch := THackCustomForm(Self).FPixelsPerInch;
   // and set current value
@@ -587,50 +616,8 @@ begin
 
   // reset TextHeight, for disable scale on VCL level
   THackCustomForm(Self).FTextHeight := 0;
+  {$endif}
 end;
-
-procedure TBaseForm.DefineProperties(Filer: TFiler);
-  function NeedWriteClientSize: Boolean;
-  begin
-    //Result := Scaled and not IsClientSizeStored
-    // IsClientSizeStored = not IsFormSizeStored
-    // IsFormSizeStored = AutoScroll or (HorzScrollBar.Range <> 0) or (VertScrollBar.Range <> 0)
-    Result := Scaled and (AutoScroll or (HorzScrollBar.Range <> 0) or (VertScrollBar.Range <> 0));
-  end;
-begin
-  inherited DefineProperties(Filer);
-
-  // ClientHeight и ClientWidth сохраняются не всегда, а вместо этого сохраняются внешние размеры формы.
-  // Это не совсем правильно, т.к. масштабировать необходимо именно клиентскую область. Функция NeedWriteClientSize
-  // определяет, нужно ли принудительно сохранять размер клиентской области.
-  Filer.DefineProperty('ClientHeight', nil, WriteClientHeight, NeedWriteClientSize);
-  Filer.DefineProperty('ClientWidth', nil, WriteClientWidth, NeedWriteClientSize);
-  Filer.DefineProperty('ScaleFix', ReadScaleFix, WriteScaleFix, Scaled);
-end;
-
-procedure TBaseForm.Loaded;
-begin
-  if (FPixelsPerInch > 0) and (FPixelsPerInch <> Screen.PixelsPerInch) then
-  begin
-    //HINT: VCL использует ScalingFlags, анализируя их в ReadState
-    //      ReadState вызывается для каждого класса в иерархии, у которых есть DFM ресурс,
-    //      поэтому ScalingFlags используются, чтобы не промасштабировать
-    //      что-то несколько раз.
-    //
-    //      Сейчас масштабирование вынесено в Loaded, а FPixelsPerInch считывается только для Root-компонента,
-    //      поэтому наше масштабирование вызываться будет один раз.
-
-    //TODO: VCL масштабирует только в том случае, если меняется размер шрифта.
-    //      Windows, похоже, масштабирует по такому же принципу, но не пропорционально,
-    //      а используя золотое сечение: коэффициент масштабирования
-    //      по X в 1.064 раза больше коэффициента масштабирования по Y
-    // пока не стал заморачиваться на всё это, масштабируем тупо:
-    ScaleControl(Self, Screen.PixelsPerInch, FPixelsPerInch);
-  end;
-
-  inherited Loaded;
-end;
-{$endif}
 
 procedure TBaseForm.InitializeNewForm;
 begin
@@ -648,6 +635,30 @@ begin
   InitializeNewForm;
 end;
 {$endif}
+
+procedure TBaseForm.DefineProperties(Filer: TFiler);
+  function NeedWriteClientSize: Boolean;
+  begin
+    //Result := Scaled and not IsClientSizeStored
+    // IsClientSizeStored = not IsFormSizeStored
+    // IsFormSizeStored = AutoScroll or (HorzScrollBar.Range <> 0) or (VertScrollBar.Range <> 0)
+    Result := Scaled and (AutoScroll or (HorzScrollBar.Range <> 0) or (VertScrollBar.Range <> 0));
+  end;
+begin
+  inherited DefineProperties(Filer);
+
+  // ClientHeight и ClientWidth сохраняются не всегда, а вместо этого сохраняются внешние размеры формы.
+  // Это не совсем правильно, т.к. масштабировать необходимо именно клиентскую область. Функция NeedWriteClientSize
+  // определяет, нужно ли принудительно сохранять размер клиентской области.
+  Filer.DefineProperty('ClientHeight', nil, WriteClientHeight, NeedWriteClientSize);
+  Filer.DefineProperty('ClientWidth', nil, WriteClientWidth, NeedWriteClientSize);
+
+  {$ifdef Allow.ScaleFix}
+  Filer.DefineProperty('ScaleFix', ReadScaleFix, WriteScaleFix, Scaled);
+  {$else}
+  Filer.DefineProperty('ScaleFix', ReadScaleFix, nil, False);
+  {$endif}
+end;
 
 procedure TBaseForm.DoClose(var Action: TCloseAction);
 begin
@@ -669,6 +680,31 @@ begin
   // destory auto free objects
   FreeAndNil(FAutoFreeOnHide);
   FreeAndNil(FAutoFreeOnDestroy);
+end;
+
+procedure TBaseForm.Loaded;
+begin
+  {$ifdef Allow.ScaleFix}
+  if (FPixelsPerInch > 0) and (FPixelsPerInch <> Screen.PixelsPerInch) then
+  begin
+    //HINT: VCL использует ScalingFlags, анализируя их в ReadState
+    //      ReadState вызывается для каждого класса в иерархии, у которых есть DFM ресурс,
+    //      поэтому ScalingFlags используются, чтобы не промасштабировать
+    //      что-то несколько раз.
+    //
+    //      Сейчас масштабирование вынесено в Loaded, а FPixelsPerInch считывается только для Root-компонента,
+    //      поэтому наше масштабирование вызываться будет один раз.
+
+    //TODO: VCL масштабирует только в том случае, если меняется размер шрифта.
+    //      Windows, похоже, масштабирует по такому же принципу, но не пропорционально,
+    //      а используя золотое сечение: коэффициент масштабирования
+    //      по X в 1.064 раза больше коэффициента масштабирования по Y
+    // пока не стал заморачиваться на всё это, масштабируем тупо:
+    ScaleControl(Self, Screen.PixelsPerInch, FPixelsPerInch);
+  end;
+  {$endif}
+
+  inherited Loaded;
 end;
 
 function TBaseForm.AutoFree(AObject: TObject; OnEvent: TAutoFreeOnEvent = afDefault): Pointer;
@@ -771,33 +807,39 @@ procedure TBaseFrame.WritePixelsPerInch(Writer: TWriter);
 begin
   Writer.WriteInteger(Screen.PixelsPerInch);
 end;
+{$endif}
 
 procedure TBaseFrame.ReadPixelsPerInch(Reader: TReader);
 begin
-  FPixelsPerInch := Reader.ReadInteger;
+  {$ifdef Allow.ScaleFix}FPixelsPerInch := {$endif}Reader.ReadInteger;
 end;
 
 procedure TBaseFrame.DefineProperties(Filer: TFiler);
 begin
   inherited DefineProperties(Filer);
 
+  {$ifdef Allow.ScaleFix}
   // сохранять свойство PixelsPerInch нужно только при дизайне самой фреймы. Если фрейма встроена во что-то, то
   // тогда свойство сохранять не нужно
   Filer.DefineProperty('PixelsPerInch', ReadPixelsPerInch, WritePixelsPerInch, not Assigned(Filer.Ancestor));
+  {$else}
+  Filer.DefineProperty('PixelsPerInch', ReadPixelsPerInch, nil, False);
+  {$endif}
 end;
 
 procedure TBaseFrame.Loaded;
 begin
+  {$ifdef Allow.ScaleFix}
   // масштабируем только в том случае, если фрейма создаётся в Run-Time вручную (т.е. Parent = nil),
   // либо в дизайнере
   if (FPixelsPerInch > 0) and (FPixelsPerInch <> Screen.PixelsPerInch) and
     (not Assigned(Parent) or (csDesigning in ComponentState))
   then
     ScaleControl(Self, Screen.PixelsPerInch, FPixelsPerInch);
+  {$endif}
 
   inherited Loaded;
 end;
-{$endif}
 
 //procedure TBaseFrame.DoDestroy;
 //begin

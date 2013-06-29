@@ -19,3 +19,6 @@
 
 // define, if using tb2k components
 {.$define bf_tb2k}
+
+// define, if using Grids.pas
+{.$define bf_Grids}
