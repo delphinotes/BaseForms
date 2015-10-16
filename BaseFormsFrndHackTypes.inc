@@ -1,4 +1,5 @@
 {$HINTS OFF}
+{$i jedi.inc}
 type
   // Classes.pas
   TFriendlyReader = class(TReader);
@@ -7,8 +8,8 @@ type
   TFriendlySizeConstraints = class(TSizeConstraints);
 
   THackSizeConstraints = class(TPersistent)
-  // it works with: Delphi 7, Delphi 2010, Delphi XE, Delphi XE2
-  {$ifdef DELPHIXE3_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
+  // it tested with: Delphi 7, Delphi 2010, Delphi XE, Delphi XE2, Delphi XE7
+  {$ifdef DELPHIXE8_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
   private
     FControl: TControl;
     FMaxHeight: TConstraintSize;
@@ -17,19 +18,19 @@ type
     FMinWidth: TConstraintSize;
   end;
 
-  {$ifdef Controls.TMargins}
+  {$ifdef Controls_TMargins}
   TFriendlyMargins = class(TMargins);
 
   THackMargins = class(TPersistent)
-  // it works with: Delphi 2010, Delphi XE, Delphi XE2
-  {$ifdef DELPHIXE3_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
+  // it tested with: Delphi 7, Delphi 2010, Delphi XE, Delphi XE2, Delphi XE7
+  {$ifdef DELPHIXE8_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
   private
     FControl: TControl;
     FLeft, FTop, FRight, FBottom: TMarginSize;
   end;
   {$endif}
 
-  {$ifdef Controls.TPadding}
+  {$ifdef Controls_TPadding}
   TFriendlyPadding = class(TPadding);
 
   THackPadding = THackMargins;
@@ -40,8 +41,8 @@ type
   THackControl = class(TComponent)
   private
   {$ifdef DELPHIXE2_UP}
-  // it works with Delphi XE2
-    {$ifdef DELPHIXE3_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
+  // it tested with: Delphi XE2, Delphi XE7
+    {$ifdef DELPHIXE8_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
     FParent: TWinControl;
     FWindowProc: TWndMethod;
     FLeft: Integer;
@@ -204,8 +205,11 @@ type
   THackCustomForm = class(TScrollingWinControl)
   private
   {$ifdef DELPHI2010_UP}
-    {$ifdef DELPHIXE3_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
-    // work with: Delphi 2010, Delphi XE, Delphi XE2
+    {$ifdef DELPHIXE8_UP}{$MESSAGE WARN 'sorry, not tested yet'}{$endif}
+    // tested with: Delphi 2010, Delphi XE, Delphi XE2, Delphi XE7
+    {$ifdef DELPHIXE6_UP}
+    FTaskbarHandler: TComponent;//TTaskbarHandler;
+    {$endif}
     FActiveControl: TWinControl;
     FFocusedControl: TWinControl;
     FBorderIcons: TBorderIcons;
@@ -224,12 +228,12 @@ type
     FHelpFile: string;
     FIcon: TIcon;
     FInCMParentBiDiModeChanged: Boolean;
-    FMenu: TObject;//TMainMenu;
+    FMenu: TComponent;//TMainMenu;
     FModalResult: TModalResult;
     FDesigner: IDesignerHook;
-    FWindowMenu: TObject;//TMenuItem;
+    FWindowMenu: TComponent;//TMenuItem;
     FPixelsPerInch: Integer;
-    FObjectMenuItem: TObject;//TMenuItem;
+    FObjectMenuItem: TComponent;//TMenuItem;
     FOleForm: IOleForm;
     FClientWidth: Integer;
     FClientHeight: Integer;
@@ -260,13 +264,13 @@ type
     FHelpFile: string;
     FIcon: TIcon;
     FInCMParentBiDiModeChanged: Boolean;
-    FMenu: TObject;//TMainMenu;
+    FMenu: TComponent;//TMainMenu;
     FModalResult: TModalResult;
     FDesigner: IDesignerHook;
     FClientHandle: HWND;
-    FWindowMenu: TObject;//TMenuItem;
+    FWindowMenu: TComponent;//TMenuItem;
     FPixelsPerInch: Integer;
-    FObjectMenuItem: TObject;//TMenuItem;
+    FObjectMenuItem: TComponent;//TMenuItem;
     FOleForm: IOleForm;
     FClientWidth: Integer;
     FClientHeight: Integer;

@@ -1,21 +1,21 @@
 {$i jedi.inc}
 
 {$ifdef DELPHI2010_UP}
-  {$define TCustomForm.InitializeNewForm}
-  {$define Controls.TMargins}
-  {$define Controls.TPadding}
+  {$define TCustomForm_InitializeNewForm}
+  {$define Controls_TMargins}
+  {$define Controls_TPadding}
 {$endif}
 
-{$define DataModule.AllowAutoFree}
-{$define Form.AllowAutoFree}
-{$define Frame.AllowAutoFree}
+{$define DataModule_AllowAutoFree}
+{$define Form_AllowAutoFree}
+{$define Frame_AllowAutoFree}
 
 
 // Allow use .OnLocalize event and ResGet Method
-{.$define Allow.Localization}
+{.$define Allow_Localization}
 
 // ScaleFix - http://www.delphinotes.ru/2013/06/vcl-form-and-frame-scale-fix.html
-{$define Allow.ScaleFix}
+{$define Allow_ScaleFix}
 
 // define, if using tb2k components
 {.$define bf_tb2k}

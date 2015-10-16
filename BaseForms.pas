@@ -38,7 +38,9 @@ type
   { TBaseDataModule }
 
   TBaseDataModule = class(TDataModule)
-  {$i BaseFormsLocalizeIntf.inc}
+  {$ifdef Allow_Localization}
+    {$i BaseFormsLocalizeIntf.inc}
+  {$endif}
   protected
     FAutoFreeObjects: TObjectList;
     procedure DoCreate; override;
@@ -54,23 +56,31 @@ type
   { TBaseForm }
 
   TBaseForm = class(TForm)
-  {$i BaseFormsLocalizeIntf.inc}
+  {$ifdef Allow_Localization}
+    {$i BaseFormsLocalizeIntf.inc}
+  {$endif}
   //published
     // наследуемые свойства:
     //property AutoScroll default False;
     //property Position default poScreenCenter;
     //property ShowHint default True;
   private
-    {$ifdef Allow.ScaleFix}
+    {$ifdef Allow_ScaleFix}
     FPixelsPerInch: Integer;
+    FNCHeight: Integer;
+    FNCWidth: Integer;
     {$endif}
     FCloseByEscape: Boolean;
     FFreeOnClose: Boolean;
 
     procedure WriteClientHeight(Writer: TWriter);
     procedure WriteClientWidth(Writer: TWriter);
-    {$ifdef Allow.ScaleFix}
+    {$ifdef Allow_ScaleFix}
     procedure WriteScaleFix(Writer: TWriter);
+    procedure WriteNCHeight(Writer: TWriter);
+    procedure WriteNCWidth(Writer: TWriter);
+    procedure ReadNCHeight(Reader: TReader);
+    procedure ReadNCWidth(Reader: TReader);
     {$endif}
     procedure ReadScaleFix(Reader: TReader);
     procedure CMDialogKey(var Message: TCMDialogKey); message CM_DIALOGKEY;
@@ -81,14 +91,14 @@ type
     FAutoFreeOnHide: TObjectList;
     FAutoFreeOnDestroy: TObjectList;
 
-    procedure InitializeNewForm; {$ifdef TCustomForm.InitializeNewForm}override;{$else}dynamic;{$endif}
+    procedure InitializeNewForm; {$ifdef TCustomForm_InitializeNewForm}override;{$else}dynamic;{$endif}
     procedure DefineProperties(Filer: TFiler); override;
     procedure DoClose(var Action: TCloseAction); override;
     procedure DoHide; override;
     procedure DoDestroy; override;
     procedure Loaded; override;
   public
-    {$ifndef TCustomForm.InitializeNewForm}
+    {$ifndef TCustomForm_InitializeNewForm}
     constructor CreateNew(AOwner: TComponent; Dummy: Integer = 0); override;
     {$endif}
     function AutoFree(AObject: TObject; OnEvent: TAutoFreeOnEvent = afDefault): Pointer;
@@ -108,12 +118,14 @@ type
 
   TBaseFrame = class(TFrame)
   private
-  {$i BaseFormsLocalizeIntf.inc}
+  {$ifdef Allow_Localization}
+    {$i BaseFormsLocalizeIntf.inc}
+  {$endif}
 //  protected
 //    FAutoFreeObjects: TObjectList;
 //    procedure DoDestroy; override;
   private
-    {$ifdef Allow.ScaleFix}
+    {$ifdef Allow_ScaleFix}
     FPixelsPerInch: Integer;
     procedure WritePixelsPerInch(Writer: TWriter);
     {$endif}
@@ -130,7 +142,7 @@ type
   end;
 
 {.$region 'LocalizationStub'}
-{$ifdef Allow.Localization}
+{$ifdef Allow_Localization}
 procedure LocalizeDataModule(ADataModule: TDataModule);
 procedure LocalizeForm(AForm: TCustomForm);
 procedure LocalizeFrame(AFrame: TCustomFrame);
@@ -147,10 +159,15 @@ procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer); over
 procedure ScaleControl(Control: TControl; M, D: Integer); overload;
 {.$endregion}
 
+type
+  TFormHelper = class helper for TCustomForm
+    procedure SafeSetPosition(APosition: TPosition);
+  end;
 
 implementation
 
 uses
+  Dialogs,
   {$ifdef bf_tb2k}
   TB2ToolWindow,
   {$endif}
@@ -160,6 +177,14 @@ uses
   StdCtrls;
 
 {$i BaseFormsFrndHackTypes.inc}
+
+{ TFormHelper }
+
+procedure TFormHelper.SafeSetPosition(APosition: TPosition);
+begin
+  //FPosition := APosition;
+  THackCustomForm(Self).FPosition := APosition;
+end;
 
 {.$region 'RestoreFormsPositions'}
 var
@@ -182,6 +207,7 @@ begin
       FormsArray[I] := Screen.CustomForms[I];
 
     // now restore this order
+    SetForegroundWindow(Application.Handle);
     for I := Count - 1 downto 0 do
       if FormsArray[I].HandleAllocated then
         BringWindowToTop(FormsArray[I].Handle);
@@ -192,7 +218,7 @@ end;
 {.$endregion}
 
 {.$region 'LocalizationStub'}
-{$ifdef Allow.Localization}
+{$ifdef Allow_Localization}
 procedure LocalizeDataModule(ADataModule: TDataModule);
 begin
   LocalizeRootComponent(ADataModule);
@@ -253,7 +279,7 @@ procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer);
     //TFriendlySizeConstraints(Control.Constraints).Change;
   end;
 
-  {$ifdef Controls.TMargins}
+  {$ifdef Controls_TMargins}
   procedure ScaleControlMargins(Control: TControl);
   begin
     with THackMargins(Control.Margins) do
@@ -309,7 +335,7 @@ procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer);
 
     ScaleControlConstraints(Control);
 
-    {$ifdef Controls.TMargins}
+    {$ifdef Controls_TMargins}
     ScaleControlMargins(Control);
     {$endif}
 
@@ -354,7 +380,7 @@ procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer);
     end;
   end;
 
-  {$ifdef Controls.TPadding}
+  {$ifdef Controls_TPadding}
   procedure ScaleWinControlPadding(WinControl: TWinControl);
   begin
     with THackPadding(WinControl.Padding) do
@@ -374,7 +400,7 @@ procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer);
 
     ScaleWinControlDesignSize(WinControl);
 
-    {$ifdef Controls.TPadding}
+    {$ifdef Controls_TPadding}
     ScaleWinControlPadding(WinControl);
     {$endif}
   end;
@@ -405,14 +431,14 @@ procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer);
     ScaleWinControl(ScrollingWinControl);
   end;
 
-  procedure ScaleCustomFormConstraints(CustomForm: TCustomForm; cdx, cdy: Integer);
-    procedure ScaleValue(var Value: TConstraintSize; M, D, s: Integer);
+  procedure ScaleCustomFormConstraints(CustomForm: TCustomForm; OldCdx, NewCdx, OldCdy, NewCdy: Integer);
+    procedure ScaleValue(var Value: TConstraintSize; M, D, OldCD, NewCD: Integer);
     var
       tmp: Integer;
     begin
       if Value > 0 then
       begin
-        tmp := MulDiv(Value - s, M, D) + s;
+        tmp := MulDiv(Value - OldCD, M, D) + NewCD;
         if tmp < 0
           then Value := 0
           else Value := tmp;
@@ -423,36 +449,48 @@ procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer);
     // разницу между внешними размерами и размерами клиентской области
     with THackSizeConstraints(CustomForm.Constraints) do
     begin
-      ScaleValue(FMaxWidth, MX, DX, cdx);
-      ScaleValue(FMinWidth, MX, DX, cdx);
-      ScaleValue(FMaxHeight, MY, DY, cdy);
-      ScaleValue(FMinHeight, MY, DY, cdy);
+      ScaleValue(FMaxWidth, MX, DX, OldCdx, NewCdx);
+      ScaleValue(FMinWidth, MX, DX, OldCdx, NewCdx);
+      ScaleValue(FMaxHeight, MY, DY, OldCdy, NewCdy);
+      ScaleValue(FMinHeight, MY, DY, OldCdy, NewCdy);
     end;
     //TFriendlySizeConstraints(Constraints).Change;
   end;
 
   procedure ScaleCustomForm(CustomForm: TCustomForm);
   var
-    W, H: Integer;
-    cdx, cdy: Integer;
+    H, W: Integer;
+    OldNCH, OldNCW: Integer;
+    NewNCH, NewNCW: Integer;
   begin
     with CustomForm do
     begin
-      cdx := Width - ClientWidth;
-      cdy := Height - ClientHeight;
+      OldNCH := 0;
+      OldNCW := 0;
+      NewNCH := Height - ClientHeight;
+      NewNCW := Width - ClientWidth;
+      if CustomForm is TBaseForm then
+      begin
+        OldNCH := TBaseForm(CustomForm).FNCHeight;
+        OldNCW := TBaseForm(CustomForm).FNCWidth;
+      end;
+      if OldNCH = 0 then
+        OldNCH := NewNCH;
+      if OldNCW = 0 then
+        OldNCW := NewNCW;
 
       if MF <> DF then
         Font.Height := MulDiv(Font.Height, MF, DF);
 
-      W := MulDiv(ClientWidth, MX, DX) + cdx;
-      H := MulDiv(ClientHeight, MY, DY) + cdy;
+      H := MulDiv(ClientHeight, MY, DY) + NewNCH;
+      W := MulDiv(ClientWidth, MX, DX) + NewNCW;
     end;
 
     ScaleWinControlDesignSize(CustomForm);
 
     ScaleScrollBars(CustomForm);
 
-    ScaleCustomFormConstraints(CustomForm, cdx, cdy);
+    ScaleCustomFormConstraints(CustomForm, OldNCW, NewNCW, OldNCH, NewNCH);
 
     // При уменьшении размера иногда (пока не разбирался почему) новые размеры не применяются
     // Наращивание ширины и высоты на 1 пиксель помогает обойти такую проблему
@@ -510,15 +548,25 @@ begin
     ScaleControl(Control);
 end;
 
+//const
+//  DesignerDefaultFontName = 'Tahoma';
+
 procedure ScaleControl(Control: TControl; M, D: Integer);
+//var
+//  s: Integer;
 begin
+//  s := Application.DefaultFont.Size;
+//  if Application.DefaultFont.Name = 'Segoe UI' then
+//    ScaleControl(Control, M * 182 * s, D * 180 * 8, M * s, D * 8, M * s, D * 8)
+//  else
+//    ScaleControl(Control, M * s, D * 8, M * s, D * 8, M * s, D * 8);
   ScaleControl(Control, M, D, M, D, M, D);
 end;
 {.$endregion}
 
 { TBaseDataModule }
 
-{$ifdef Allow.Localization}
+{$ifdef Allow_Localization}
 procedure TBaseDataModule.DoLocalize;
 begin
   if Assigned(FOnLocalize) then
@@ -538,7 +586,7 @@ end;
 
 procedure TBaseDataModule.DoCreate;
 begin
-  {$ifdef Allow.Localization}
+  {$ifdef Allow_Localization}
   LocalizeDataModule(Self);
   {$endif}
   inherited DoCreate;
@@ -567,7 +615,7 @@ end;
 
 { TBaseForm }
 
-{$ifdef Allow.Localization}
+{$ifdef Allow_Localization}
 procedure TBaseForm.DoLocalize;
 begin
   if Assigned(FOnLocalize) then
@@ -595,12 +643,33 @@ begin
   Writer.WriteInteger(ClientWidth);
 end;
 
-{$ifdef Allow.ScaleFix}
+{$ifdef Allow_ScaleFix}
 procedure TBaseForm.WriteScaleFix(Writer: TWriter);
 begin
   // just save flag to DFM for disable VCL scale on ReadState
   Writer.WriteBoolean(True);
 end;
+
+procedure TBaseForm.WriteNCHeight(Writer: TWriter);
+begin
+  Writer.WriteInteger(Height - ClientHeight);
+end;
+
+procedure TBaseForm.WriteNCWidth(Writer: TWriter);
+begin
+  Writer.WriteInteger(Width - ClientWidth);
+end;
+
+procedure TBaseForm.ReadNCHeight(Reader: TReader);
+begin
+  FNCHeight := Reader.ReadInteger;
+end;
+
+procedure TBaseForm.ReadNCWidth(Reader: TReader);
+begin
+  FNCWidth := Reader.ReadInteger;
+end;
+
 {$endif}
 
 procedure TBaseForm.ReadScaleFix(Reader: TReader);
@@ -608,7 +677,7 @@ begin
   if not Reader.ReadBoolean then
     Exit;
 
-  {$ifdef Allow.ScaleFix}
+  {$ifdef Allow_ScaleFix}
   // save readed PixelsPerInch from DFM
   FPixelsPerInch := THackCustomForm(Self).FPixelsPerInch;
   // and set current value
@@ -621,14 +690,14 @@ end;
 
 procedure TBaseForm.InitializeNewForm;
 begin
-  {$ifdef TCustomForm.InitializeNewForm}
+  {$ifdef TCustomForm_InitializeNewForm}
   inherited InitializeNewForm;
   {$endif}
   FCloseByEscape := True;
   ParentFont := True;
 end;
 
-{$ifndef TCustomForm.InitializeNewForm}
+{$ifndef TCustomForm_InitializeNewForm}
 constructor TBaseForm.CreateNew(AOwner: TComponent; Dummy: Integer = 0);
 begin
   inherited CreateNew(AOwner, Dummy);
@@ -644,6 +713,17 @@ procedure TBaseForm.DefineProperties(Filer: TFiler);
     // IsFormSizeStored = AutoScroll or (HorzScrollBar.Range <> 0) or (VertScrollBar.Range <> 0)
     Result := Scaled and (AutoScroll or (HorzScrollBar.Range <> 0) or (VertScrollBar.Range <> 0));
   end;
+
+  function NeedWriteNCHeight: Boolean;
+  begin
+    Result := Scaled and (Height <> ClientHeight) and ((Constraints.MinHeight <> 0) or (Constraints.MaxHeight <> 0));
+  end;
+
+  function NeedWriteNCWidth: Boolean;
+  begin
+    Result := Scaled and (Width <> ClientWidth) and ((Constraints.MinWidth <> 0) or (Constraints.MaxWidth <> 0));
+  end;
+
 begin
   inherited DefineProperties(Filer);
 
@@ -653,7 +733,11 @@ begin
   Filer.DefineProperty('ClientHeight', nil, WriteClientHeight, NeedWriteClientSize);
   Filer.DefineProperty('ClientWidth', nil, WriteClientWidth, NeedWriteClientSize);
 
-  {$ifdef Allow.ScaleFix}
+  {$ifdef Allow_ScaleFix}
+  // так же сохраняем разницу между внешними размерами и клиентской областью,
+  // это необходимо при использовании констрейнтов для корректного их масштабирования
+  Filer.DefineProperty('NCHeight', ReadNCHeight, WriteNCHeight, NeedWriteNCHeight);
+  Filer.DefineProperty('NCWidth', ReadNCWidth, WriteNCWidth, NeedWriteNCWidth);
   Filer.DefineProperty('ScaleFix', ReadScaleFix, WriteScaleFix, Scaled);
   {$else}
   Filer.DefineProperty('ScaleFix', ReadScaleFix, nil, False);
@@ -683,9 +767,35 @@ begin
 end;
 
 procedure TBaseForm.Loaded;
+  {$ifdef Allow_ScaleFix}
+  function NeedScale: Boolean;
+    function DPIChanged: Boolean;
+    begin
+      Result := FPixelsPerInch <> Screen.PixelsPerInch;
+    end;
+
+    //function FontChanged: Boolean;
+    //begin
+    //  Result := ParentFont and ((Application.DefaultFont.Name <> DesignerDefaultFontName) or (Application.DefaultFont.Size <> 8));
+    //end;
+
+    function NeedConstraintsResize: Boolean;
+    begin
+      //Result := (Constraints.MaxHeight <> 0) or (Constraints.MaxWidth <> 0)
+      // (Constraints.MinHeight <> 0) or (Constraints.MinWidth <> 0);
+      //if Result then
+      //  Result
+      Result := (FNCHeight <> 0) or (FNCWidth <> 0);
+    end;
+  begin
+    Result := (FPixelsPerInch > 0) and (DPIChanged {or FontChanged} or NeedConstraintsResize);
+  end;
+  {$endif}
 begin
-  {$ifdef Allow.ScaleFix}
-  if (FPixelsPerInch > 0) and (FPixelsPerInch <> Screen.PixelsPerInch) then
+  {$ifdef Allow_ScaleFix}
+  //if (FPixelsPerInch > 0) and ((FPixelsPerInch <> Screen.PixelsPerInch) or (Application.DefaultFont.Name <> 'Tahoma')) then
+  //if (FPixelsPerInch > 0) and (FPixelsPerInch <> Screen.PixelsPerInch) then
+  if NeedScale then
   begin
     //HINT: VCL использует ScalingFlags, анализируя их в ReadState
     //      ReadState вызывается для каждого класса в иерархии, у которых есть DFM ресурс,
@@ -701,6 +811,8 @@ begin
     //      по X в 1.064 раза больше коэффициента масштабирования по Y
     // пока не стал заморачиваться на всё это, масштабируем тупо:
     ScaleControl(Self, Screen.PixelsPerInch, FPixelsPerInch);
+    //ScaleControl(Self, Screen.PixelsPerInch * MulDiv(Canvas.TextWidth('M'), FPixelsPerInch, Screen.PixelsPerInch), FPixelsPerInch * 8,
+    //  Screen.PixelsPerInch, FPixelsPerInch, Screen.PixelsPerInch, FPixelsPerInch);
   end;
   {$endif}
 
@@ -784,7 +896,7 @@ end;
 
 { TBaseFrame }
 
-{$ifdef Allow.Localization}
+{$ifdef Allow_Localization}
 procedure TBaseFrame.DoLocalize;
 begin
   if Assigned(FOnLocalize) then
@@ -802,7 +914,7 @@ begin
 end;
 {$endif}
 
-{$ifdef Allow.ScaleFix}
+{$ifdef Allow_ScaleFix}
 procedure TBaseFrame.WritePixelsPerInch(Writer: TWriter);
 begin
   Writer.WriteInteger(Screen.PixelsPerInch);
@@ -811,14 +923,14 @@ end;
 
 procedure TBaseFrame.ReadPixelsPerInch(Reader: TReader);
 begin
-  {$ifdef Allow.ScaleFix}FPixelsPerInch := {$endif}Reader.ReadInteger;
+  {$ifdef Allow_ScaleFix}FPixelsPerInch := {$endif}Reader.ReadInteger;
 end;
 
 procedure TBaseFrame.DefineProperties(Filer: TFiler);
 begin
   inherited DefineProperties(Filer);
 
-  {$ifdef Allow.ScaleFix}
+  {$ifdef Allow_ScaleFix}
   // сохранять свойство PixelsPerInch нужно только при дизайне самой фреймы. Если фрейма встроена во что-то, то
   // тогда свойство сохранять не нужно
   Filer.DefineProperty('PixelsPerInch', ReadPixelsPerInch, WritePixelsPerInch, not Assigned(Filer.Ancestor));
@@ -828,14 +940,22 @@ begin
 end;
 
 procedure TBaseFrame.Loaded;
+  {$ifdef Allow_ScaleFix}
+  function NeedScale: Boolean;
+  begin
+    Result := (FPixelsPerInch <> Screen.PixelsPerInch){ or (Application.DefaultFont.Name <> DesignerDefaultFontName)
+      or (Application.DefaultFont.Size <> 8)};
+  end;
+  {$endif}
 begin
-  {$ifdef Allow.ScaleFix}
+  {$ifdef Allow_ScaleFix}
   // масштабируем только в том случае, если фрейма создаётся в Run-Time вручную (т.е. Parent = nil),
   // либо в дизайнере
-  if (FPixelsPerInch > 0) and (FPixelsPerInch <> Screen.PixelsPerInch) and
-    (not Assigned(Parent) or (csDesigning in ComponentState))
+  if (FPixelsPerInch > 0) and NeedScale and (not Assigned(Parent) or (csDesigning in ComponentState))
   then
     ScaleControl(Self, Screen.PixelsPerInch, FPixelsPerInch);
+    //ScaleControl(Self, Trunc(Screen.PixelsPerInch * 1.064), Trunc(FPixelsPerInch),
+    //  Screen.PixelsPerInch, FPixelsPerInch, Screen.PixelsPerInch, FPixelsPerInch);
   {$endif}
 
   inherited Loaded;
