@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{87524CA7-D232-433B-A9CD-4A3CCF68225E}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="BaseFormsR.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="BaseFormsD.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="BaseFormsR">
+        <MSBuild Projects="BaseFormsR.dproj"/>
+    </Target>
+    <Target Name="BaseFormsR:Clean">
+        <MSBuild Projects="BaseFormsR.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="BaseFormsR:Make">
+        <MSBuild Projects="BaseFormsR.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="BaseFormsD">
+        <MSBuild Projects="BaseFormsD.dproj"/>
+    </Target>
+    <Target Name="BaseFormsD:Clean">
+        <MSBuild Projects="BaseFormsD.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="BaseFormsD:Make">
+        <MSBuild Projects="BaseFormsD.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="BaseFormsR;BaseFormsD"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="BaseFormsR:Clean;BaseFormsD:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="BaseFormsR:Make;BaseFormsD:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
