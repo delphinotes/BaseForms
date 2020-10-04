@@ -35,6 +35,7 @@ requires
   vcl;
 
 contains
-  BaseForms in '..\..\BaseForms.pas';
+  BaseForms in '..\..\BaseForms.pas',
+  uScaleControls in '..\..\uScaleControls.pas';
 
 end.

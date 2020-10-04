@@ -1,5 +1,6 @@
 {$HINTS OFF}
 {$i jedi.inc}
+{$i BaseForms.inc}
 type
   // Classes.pas
   TFriendlyReader = class(TReader);
@@ -284,9 +285,5 @@ type
 
   TFriendlyCustomLabel = class(TCustomLabel);
 
-  {$ifdef bf_Grids}
-  // Grids.pas
-  TFriendlyCustomGrid = class(TCustomGrid);
-  {$endif}
 {$HINTS ON}
 

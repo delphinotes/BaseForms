@@ -20,6 +20,6 @@
   // ScaleFix - http://www.delphinotes.ru/2013/06/vcl-form-and-frame-scale-fix.html
   {$define Allow_ScaleFix}
 
-  {$define DoubleBufferedAlwaysOn}
+  {.$define DoubleBufferedAlwaysOn}
 
 {$endif ~BaseForms_inc}

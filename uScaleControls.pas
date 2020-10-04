@@ -45,6 +45,7 @@ type
   public
     procedure Init(const ANewPPI, AOldPPI: Integer); {$ifdef SUPPORTS_INLINE}inline;{$endif}
     function Scale(const AValue: Integer): Integer; {$ifdef SUPPORTS_INLINE}inline;{$endif}
+    function ScaleRect(const ARect: TRect): TRect; {$ifdef SUPPORTS_INLINE}inline;{$endif}
     function Upscaling: Boolean; {$ifdef SUPPORTS_INLINE}inline;{$endif}
     function Downscaling: Boolean; {$ifdef SUPPORTS_INLINE}inline;{$endif}
     property NewPPI: Integer read FNewPPI;
@@ -105,8 +106,7 @@ uses
   SysUtils,
   Windows,
 {$endif}
-  BaseForms,
-  uScaleControlsEx;
+  BaseForms;
 
 {$i BaseFormsFrndHackTypes.inc}
 
@@ -125,6 +125,14 @@ function TIntScaler.Scale(const AValue: Integer): Integer;
 begin
   //Result := MulDiv(AValue, NewPPI, OldPPI); // <-- так inline не работает
   Result := (AValue * NewPPI) div OldPPI;
+end;
+
+function TIntScaler.ScaleRect(const ARect: TRect): TRect;
+begin
+  Result.Left := Scale(ARect.Left);
+  Result.Right := Scale(ARect.Right);
+  Result.Top := Scale(ARect.Top);
+  Result.Bottom := Scale(ARect.Bottom);
 end;
 
 function TIntScaler.Upscaling: Boolean;
@@ -228,6 +236,8 @@ end;
 
 class procedure TScaleControls.ScaleControlFont(AControl: TControl; const AScaler: TIntScaler);
 begin
+//EXIT;
+
   if TFriendlyControl(AControl).ParentFont then
     Exit;
   if (AControl is TCustomStatusBar) and TCustomStatusBar(AControl).UseSystemFont then

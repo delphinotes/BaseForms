@@ -8,8 +8,8 @@ unit BaseForms;
 ****************************************************************
   Author    : Zverev Nikolay (delphinotes.ru)
   Created   : 30.08.2006
-  Modified  : 16.10.2018
-  Version   : 1.01
+  Modified  : 04.10.2020
+  Version   : 1.02
   History   :
 ****************************************************************
 
@@ -98,6 +98,7 @@ type
     FCloseByEscape: Boolean;
     FFreeOnClose: Boolean;
     FInMouseWheelHandler: Boolean;
+    FUseAdvancedWheelHandler: Boolean;
 
     procedure WriteClientHeight(Writer: TWriter);
     procedure WriteClientWidth(Writer: TWriter);
@@ -114,6 +115,7 @@ type
     procedure WMSetIcon(var Message: TWMSetIcon); message WM_SETICON;
     procedure WMSysCommand(var Message: TWMSysCommand); message WM_SYSCOMMAND;
     procedure WMActivate(var Message: TWMActivate); message WM_ACTIVATE;
+    procedure WMWindowPosChanged(var Msg: TWMWindowPosChanged); message WM_WINDOWPOSCHANGED;
     //procedure WMDpiChanged(var Message: TMessage); message WM_DPICHANGED;
     //procedure CMParentFontChanged(var Message: TCMParentFontChanged); message CM_PARENTFONTCHANGED;
   protected
@@ -136,6 +138,7 @@ type
   published
     property CloseByEscape: Boolean read FCloseByEscape write FCloseByEscape default True;
     property FreeOnClose: Boolean read FFreeOnClose write FFreeOnClose default False;
+    property UseAdvancedWheelHandler: Boolean read FUseAdvancedWheelHandler write FUseAdvancedWheelHandler default True;
   published
     // standart properties - add the 'default' to not saved in dfm
     property OldCreateOrder default False;
@@ -188,7 +191,14 @@ function ResGet(const Section, StringID: string; const DefaultValue: string = ''
 {$ifdef SUPPORTS_CLASS_HELPERS}
 type
   TFormHelper = class helper for TCustomForm
+    // сhanging properties through Property causes windowhandle to be recreated (if any)
+    // and Visible to be set True
+    // the hack is needed to bypass this behavior
+    procedure SafeSetBorderIcons(ABorderIcons: TBorderIcons);
+    procedure SafeSetBorderStyle(ABorderStyle: TFormBorderStyle);
+    procedure SafeSetFormStyle(AFormStyle: TFormStyle);
     procedure SafeSetPosition(APosition: TPosition);
+    procedure SafeSetWidowState(AWindowState: TWindowState);
   end;
 {$endif}
 
@@ -209,7 +219,8 @@ uses
 //{$ifdef Allow_ScaleFix}
 //const
 //  DesignerDefaultFontName = 'Tahoma';
-//{$endif}
+
+//{$endif}
 
 procedure ClearUserInput;
 var
@@ -230,11 +241,31 @@ end;
 {$ifdef SUPPORTS_CLASS_HELPERS}
 { TFormHelper }
 
+procedure TFormHelper.SafeSetBorderIcons(ABorderIcons: TBorderIcons);
+begin
+  THackCustomForm(Self).FBorderIcons := ABorderIcons;
+end;
+
+procedure TFormHelper.SafeSetBorderStyle(ABorderStyle: TFormBorderStyle);
+begin
+  THackCustomForm(Self).FBorderStyle := ABorderStyle;
+end;
+
+procedure TFormHelper.SafeSetFormStyle(AFormStyle: TFormStyle);
+begin
+  THackCustomForm(Self).FFormStyle := AFormStyle;
+end;
+
 procedure TFormHelper.SafeSetPosition(APosition: TPosition);
 begin
-  //FPosition := APosition;
   THackCustomForm(Self).FPosition := APosition;
 end;
+
+procedure TFormHelper.SafeSetWidowState(AWindowState: TWindowState);
+begin
+  THackCustomForm(Self).FWindowState := AWindowState;
+end;
+
 {$endif}
 
 {.$region 'RestoreFormsPositions'}
@@ -446,6 +477,7 @@ begin
   inherited InitializeNewForm;
   {$endif}
   FCloseByEscape := True;
+  FUseAdvancedWheelHandler := True;
 
   {$ifdef DoubleBufferedAlwaysOn}
   DoubleBuffered := True;
@@ -547,6 +579,12 @@ var
   LScrollCount: DWORD;
   LScrollPos: Integer;
 begin
+  if not UseAdvancedWheelHandler then
+  begin
+    inherited MouseWheelHandler(Message);
+    Exit;
+  end;
+
   // Переопределяем логику обработки колеса мыши следующим образом:
   //  а) ищем контрол под курсором
   //  б) далее ищем родительский, который имеет полосы прокрутки
@@ -849,6 +887,16 @@ begin
     RestoreFormsPositions;
   inherited;
 end;
+
+procedure TBaseForm.WMWindowPosChanged(var Msg: TWMWindowPosChanged);
+begin
+  if IsIconic(Handle) then
+    // VCL bug: calling UpdateBounds from the Restore event causes additional window flickering
+    Exit;
+  inherited;
+end;
+
+
 
 //procedure TBaseForm.CMParentFontChanged(var Message: TCMParentFontChanged);
 //begin
