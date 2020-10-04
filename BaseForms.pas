@@ -8,8 +8,8 @@ unit BaseForms;
 ****************************************************************
   Author    : Zverev Nikolay (delphinotes.ru)
   Created   : 30.08.2006
-  Modified  : 19.01.2013
-  Version   : 1.00
+  Modified  : 16.10.2018
+  Version   : 1.01
   History   :
 ****************************************************************
 
@@ -20,11 +20,35 @@ unit BaseForms;
 
 interface
 
+{$i jedi.inc}
 {$i BaseForms.inc}
 
+{$ifdef HAS_UNITSCOPE}
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Contnrs;
+  Winapi.Windows,
+  Winapi.Messages,
+  System.SysUtils,
+  System.Variants,
+  System.Classes,
+  System.Contnrs,
+  Vcl.Graphics,
+  Vcl.Controls,
+  Vcl.Forms;
+{$else}
+uses
+  Windows,
+  Messages,
+  SysUtils,
+  Variants,
+  Classes,
+  Contnrs,
+  Graphics,
+  Controls,
+  Forms;
+{$endif}
+
+//const
+//  WM_DPICHANGED = 736; // 0x02E0
 
 type
   TAutoFreeOnEvent = (afDefault, afHide, afDestroy);
@@ -64,14 +88,16 @@ type
     //property AutoScroll default False;
     //property Position default poScreenCenter;
     //property ShowHint default True;
-  private
+  protected
     {$ifdef Allow_ScaleFix}
     FPixelsPerInch: Integer;
     FNCHeight: Integer;
     FNCWidth: Integer;
     {$endif}
+  private
     FCloseByEscape: Boolean;
     FFreeOnClose: Boolean;
+    FInMouseWheelHandler: Boolean;
 
     procedure WriteClientHeight(Writer: TWriter);
     procedure WriteClientWidth(Writer: TWriter);
@@ -83,10 +109,13 @@ type
     procedure ReadNCWidth(Reader: TReader);
     {$endif}
     procedure ReadScaleFix(Reader: TReader);
-    procedure CMDialogKey(var Message: TCMDialogKey); message CM_DIALOGKEY;
+    //procedure CMDialogKey(var Message: TCMDialogKey); message CM_DIALOGKEY;
+    procedure CMChildKey(var Message: TCMChildKey); message CM_CHILDKEY;
     procedure WMSetIcon(var Message: TWMSetIcon); message WM_SETICON;
     procedure WMSysCommand(var Message: TWMSysCommand); message WM_SYSCOMMAND;
     procedure WMActivate(var Message: TWMActivate); message WM_ACTIVATE;
+    //procedure WMDpiChanged(var Message: TMessage); message WM_DPICHANGED;
+    //procedure CMParentFontChanged(var Message: TCMParentFontChanged); message CM_PARENTFONTCHANGED;
   protected
     FAutoFreeOnHide: TObjectList;
     FAutoFreeOnDestroy: TObjectList;
@@ -97,10 +126,12 @@ type
     procedure DoHide; override;
     procedure DoDestroy; override;
     procedure Loaded; override;
+    function PostCloseMessage: LRESULT;
   public
     {$ifndef TCustomForm_InitializeNewForm}
     constructor CreateNew(AOwner: TComponent; Dummy: Integer = 0); override;
     {$endif}
+    procedure MouseWheelHandler(var Message: TMessage); override;
     function AutoFree(AObject: TObject; OnEvent: TAutoFreeOnEvent = afDefault): Pointer;
   published
     property CloseByEscape: Boolean read FCloseByEscape write FCloseByEscape default True;
@@ -130,7 +161,6 @@ type
     procedure WritePixelsPerInch(Writer: TWriter);
     {$endif}
     procedure ReadPixelsPerInch(Reader: TReader);
-
   protected
     procedure DefineProperties(Filer: TFiler); override;
     procedure Loaded; override;
@@ -140,6 +170,8 @@ type
     property Top default 0;
     property TabOrder default 0;
   end;
+
+procedure ClearUserInput;
 
 {.$region 'LocalizationStub'}
 {$ifdef Allow_Localization}
@@ -153,31 +185,49 @@ function ResGet(const Section, StringID: string; const DefaultValue: string = ''
 {$endif}
 {.$endregion}
 
-{.$region 'ScaleControl'}
-// ScaleControl - scales control, its font, constraints, margins, scrollbars and its childs (if any) - recursively
-procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer); overload;
-procedure ScaleControl(Control: TControl; M, D: Integer); overload;
-{.$endregion}
-
+{$ifdef SUPPORTS_CLASS_HELPERS}
 type
   TFormHelper = class helper for TCustomForm
     procedure SafeSetPosition(APosition: TPosition);
   end;
+{$endif}
 
 implementation
 
 uses
-  Dialogs,
-  {$ifdef bf_tb2k}
-  TB2ToolWindow,
-  {$endif}
-  {$ifdef bf_Grids}
-  Grids,
-  {$endif}
+{$ifdef Allow_ScaleFix}
+  uScaleControls,
+{$endif}
+{$ifdef HAS_UNITSCOPE}
+  System.Types,
+  Vcl.StdCtrls;
+{$else}
+  Types,
   StdCtrls;
+{$endif}
+
+//{$ifdef Allow_ScaleFix}
+//const
+//  DesignerDefaultFontName = 'Tahoma';
+//{$endif}
+
+procedure ClearUserInput;
+var
+  Msg: TMsg;
+  NeedTerminate: Boolean;
+begin
+  NeedTerminate := False;
+  while PeekMessage(Msg, 0, WM_MOUSEFIRST, WM_MOUSELAST, PM_REMOVE or PM_NOYIELD) do
+    NeedTerminate := NeedTerminate or (Msg.message = WM_QUIT);
+  while PeekMessage(Msg, 0, WM_KEYFIRST, WM_KEYLAST, PM_REMOVE or PM_NOYIELD) do
+    NeedTerminate := NeedTerminate or (Msg.message = WM_QUIT);
+  if NeedTerminate then
+    Application.Terminate;
+end;
 
 {$i BaseFormsFrndHackTypes.inc}
 
+{$ifdef SUPPORTS_CLASS_HELPERS}
 { TFormHelper }
 
 procedure TFormHelper.SafeSetPosition(APosition: TPosition);
@@ -185,6 +235,7 @@ begin
   //FPosition := APosition;
   THackCustomForm(Self).FPosition := APosition;
 end;
+{$endif}
 
 {.$region 'RestoreFormsPositions'}
 var
@@ -263,305 +314,6 @@ begin
   Result := DefaultValue;
 end;
 {$endif}
-{.$endregion}
-
-{.$region 'ScaleControl'}
-procedure ScaleControl(Control: TControl; MX, DX, MY, DY, MF, DF: Integer);
-  procedure ScaleControlConstraints(Control: TControl);
-  begin
-    with THackSizeConstraints(Control.Constraints) do
-    begin
-      FMaxHeight := MulDiv(FMaxHeight, MY, DY);
-      FMaxWidth := MulDiv(FMaxWidth, MX, DX);
-      FMinHeight := MulDiv(FMinHeight, MY, DY);
-      FMinWidth := MulDiv(FMinWidth, MX, DX);
-    end;
-    //TFriendlySizeConstraints(Control.Constraints).Change;
-  end;
-
-  {$ifdef Controls_TMargins}
-  procedure ScaleControlMargins(Control: TControl);
-  begin
-    with THackMargins(Control.Margins) do
-    begin
-      FLeft := MulDiv(FLeft, MX, DX);
-      FTop := MulDiv(FTop, MY, DY);
-      FRight := MulDiv(FRight, MX, DX);
-      FBottom := MulDiv(FBottom, MY, DY);
-    end;
-    //TFriendlyMargins(Control.Margins).Change;
-  end;
-  {$endif}
-
-  {$ifdef bf_Grids}
-  procedure ScaleCustomGrid(CustomGrid: TCustomGrid);
-  var
-    i: Integer;
-  begin
-    with TFriendlyCustomGrid(CustomGrid) do
-    begin
-      for i := 0 to ColCount - 1 do
-        ColWidths[i] := MulDiv(ColWidths[i], MX, DX);
-      DefaultColWidth := MulDiv(DefaultColWidth, MX, DX);
-
-      for i := 0 to RowCount - 1 do
-        RowHeights[i] := MulDiv(RowHeights[i], MY, DY);
-      DefaultRowHeight := MulDiv(DefaultRowHeight, MY, DY);
-    end;
-  end;
-  {$endif}
-
-  procedure ScaleControl(Control: TControl);
-  var
-    L, T, W, H: Integer;
-  begin
-    with Control do
-    begin
-      // scale Left
-      L := MulDiv(Left, MX, DX);
-      // scale Top
-      T := MulDiv(Top, MY, DY);
-      // scale Width
-      if not (csFixedWidth in ControlStyle) then
-        W := MulDiv(Left + Width, MX, DX) - L
-      else
-        W := Width;
-      // scale Hight
-      if not (csFixedHeight in ControlStyle) then
-        H := MulDiv(Top + Height, MY, DY) - T
-      else
-        H := Height;
-    end;
-
-    ScaleControlConstraints(Control);
-
-    {$ifdef Controls_TMargins}
-    ScaleControlMargins(Control);
-    {$endif}
-
-    {$ifdef bf_tb2k}
-    // scale TTBToolWindow
-    if Control is TTBToolWindow then
-      with TTBToolWindow(Control) do
-      begin
-        MaxClientHeight := MulDiv(MaxClientHeight, MY, DY);
-        MaxClientWidth := MulDiv(MaxClientWidth, MX, DX);
-        MinClientHeight := MulDiv(MinClientHeight, MY, DY);
-        MinClientWidth := MulDiv(MinClientWidth, MX, DX);
-      end;
-    {$endif}
-
-    {$ifdef bf_Grids}
-    if Control is TCustomGrid then
-      ScaleCustomGrid(TCustomGrid(Control));
-    {$endif}
-
-    // apply new bounds (with check constraints and margins)
-    Control.SetBounds(L, T, W, H);
-
-    with THackControl(Control), TFriendlyControl(Control) do
-    begin
-      // scale OriginalParentSize
-      FOriginalParentSize.X := MulDiv(FOriginalParentSize.X, MX, DX);
-      FOriginalParentSize.Y := MulDiv(FOriginalParentSize.Y, MY, DY);
-
-      // scale Font.Size
-      if not ParentFont and (MF <> DF) then
-        Font.Size := MulDiv(Font.Size, MF, DF);
-    end;
-  end;
-
-  procedure ScaleWinControlDesignSize(WinControl: TWinControl);
-  begin
-    with TFriendlyWinControl(WinControl) do
-    begin
-      FDesignSize.X := MulDiv(FDesignSize.X, MX, DX);
-      FDesignSize.Y := MulDiv(FDesignSize.Y, MY, DY);
-    end;
-  end;
-
-  {$ifdef Controls_TPadding}
-  procedure ScaleWinControlPadding(WinControl: TWinControl);
-  begin
-    with THackPadding(WinControl.Padding) do
-    begin
-      FLeft := MulDiv(FLeft, MX, DX);
-      FTop := MulDiv(FTop, MY, DY);
-      FRight := MulDiv(FRight, MX, DX);
-      FBottom := MulDiv(FBottom, MY, DY);
-    end;
-    TFriendlyPadding(WinControl.Padding).Change;
-  end;
-  {$endif}
-
-  procedure ScaleWinControl(WinControl: TWinControl);
-  begin
-    ScaleControl(WinControl);
-
-    ScaleWinControlDesignSize(WinControl);
-
-    {$ifdef Controls_TPadding}
-    ScaleWinControlPadding(WinControl);
-    {$endif}
-  end;
-
-  procedure ScaleScrollBars(Control: TScrollingWinControl);
-  begin
-    with TFriendlyScrollingWinControl(Control) do
-    begin
-      if not AutoScroll then
-      begin
-        with HorzScrollBar do
-        begin
-          Position := 0;
-          Range := MulDiv(Range, MX, DX);
-        end;
-        with VertScrollBar do
-        begin
-          Position := 0;
-          Range := MulDiv(Range, MY, DY);
-        end;
-      end;
-    end;
-  end;
-
-  procedure ScaleScrollingWinControl(ScrollingWinControl: TScrollingWinControl);
-  begin
-    ScaleScrollBars(ScrollingWinControl);
-    ScaleWinControl(ScrollingWinControl);
-  end;
-
-  procedure ScaleCustomFormConstraints(CustomForm: TCustomForm; OldCdx, NewCdx, OldCdy, NewCdy: Integer);
-    procedure ScaleValue(var Value: TConstraintSize; M, D, OldCD, NewCD: Integer);
-    var
-      tmp: Integer;
-    begin
-      if Value > 0 then
-      begin
-        tmp := MulDiv(Value - OldCD, M, D) + NewCD;
-        if tmp < 0
-          then Value := 0
-          else Value := tmp;
-      end;
-    end;
-  begin
-    // при масштабировании констрейнтов формы, надо учитывать
-    // разницу между внешними размерами и размерами клиентской области
-    with THackSizeConstraints(CustomForm.Constraints) do
-    begin
-      ScaleValue(FMaxWidth, MX, DX, OldCdx, NewCdx);
-      ScaleValue(FMinWidth, MX, DX, OldCdx, NewCdx);
-      ScaleValue(FMaxHeight, MY, DY, OldCdy, NewCdy);
-      ScaleValue(FMinHeight, MY, DY, OldCdy, NewCdy);
-    end;
-    //TFriendlySizeConstraints(Constraints).Change;
-  end;
-
-  procedure ScaleCustomForm(CustomForm: TCustomForm);
-  var
-    H, W: Integer;
-    OldNCH, OldNCW: Integer;
-    NewNCH, NewNCW: Integer;
-  begin
-    with CustomForm do
-    begin
-      OldNCH := 0;
-      OldNCW := 0;
-      NewNCH := Height - ClientHeight;
-      NewNCW := Width - ClientWidth;
-      if CustomForm is TBaseForm then
-      begin
-        OldNCH := TBaseForm(CustomForm).FNCHeight;
-        OldNCW := TBaseForm(CustomForm).FNCWidth;
-      end;
-      if OldNCH = 0 then
-        OldNCH := NewNCH;
-      if OldNCW = 0 then
-        OldNCW := NewNCW;
-
-      if MF <> DF then
-        Font.Height := MulDiv(Font.Height, MF, DF);
-
-      H := MulDiv(ClientHeight, MY, DY) + NewNCH;
-      W := MulDiv(ClientWidth, MX, DX) + NewNCW;
-    end;
-
-    ScaleWinControlDesignSize(CustomForm);
-
-    ScaleScrollBars(CustomForm);
-
-    ScaleCustomFormConstraints(CustomForm, OldNCW, NewNCW, OldNCH, NewNCH);
-
-    // При уменьшении размера иногда (пока не разбирался почему) новые размеры не применяются
-    // Наращивание ширины и высоты на 1 пиксель помогает обойти такую проблему
-    if DX > MX then
-      inc(W);
-    if DY > MY then
-      inc(H);
-
-    // apply new bounds (with check constraints and margins)
-    with CustomForm do
-      SetBounds(Left, Top, W, H);
-  end;
-
-  procedure ScaleAndAlignWinControl(WinControl: TWinControl);
-  var
-    SavedAnchors: array of TAnchors;
-    i: Integer;
-  begin
-    with WinControl do
-    begin
-      // disable anchors of child controls:
-      SetLength(SavedAnchors, ControlCount);
-      for i := 0 to ControlCount - 1 do
-      begin
-        SavedAnchors[i] := Controls[i].Anchors;
-        Controls[i].Anchors := [akLeft, akTop];
-      end;
-
-      DisableAlign;
-      try
-        // scale itself:
-        if WinControl is TCustomForm then
-          ScaleCustomForm(TCustomForm(WinControl))
-        else if WinControl is TScrollingWinControl then
-          ScaleScrollingWinControl(TScrollingWinControl(WinControl))
-        else
-          ScaleWinControl(WinControl);
-
-        // scale child controls:
-        for i := 0 to ControlCount - 1 do
-          BaseForms.ScaleControl(Controls[i], MX, DX, MY, DY, MF, DF);
-      finally
-        EnableAlign;
-
-        // enable anchors of child controls:
-        for i := 0 to ControlCount - 1 do
-          Controls[i].Anchors := SavedAnchors[i];
-      end;
-    end;
-  end;
-begin
-  if Control is TWinControl then
-    ScaleAndAlignWinControl(TWinControl(Control))
-  else
-    ScaleControl(Control);
-end;
-
-//const
-//  DesignerDefaultFontName = 'Tahoma';
-
-procedure ScaleControl(Control: TControl; M, D: Integer);
-//var
-//  s: Integer;
-begin
-//  s := Application.DefaultFont.Size;
-//  if Application.DefaultFont.Name = 'Segoe UI' then
-//    ScaleControl(Control, M * 182 * s, D * 180 * 8, M * s, D * 8, M * s, D * 8)
-//  else
-//    ScaleControl(Control, M * s, D * 8, M * s, D * 8, M * s, D * 8);
-  ScaleControl(Control, M, D, M, D, M, D);
-end;
 {.$endregion}
 
 { TBaseDataModule }
@@ -694,6 +446,10 @@ begin
   inherited InitializeNewForm;
   {$endif}
   FCloseByEscape := True;
+
+  {$ifdef DoubleBufferedAlwaysOn}
+  DoubleBuffered := True;
+  {$endif}
   ParentFont := True;
 end;
 
@@ -704,6 +460,183 @@ begin
   InitializeNewForm;
 end;
 {$endif}
+
+procedure TBaseForm.MouseWheelHandler(var Message: TMessage);
+  procedure WheelMsgToScrollMsg(const AWheelMsg: TMessage; var AScrollMsg: TMessage; var AScrollCount: DWORD);
+  var
+    LWheelMsg: TWMMouseWheel absolute AWheelMsg;
+    LScrollMsg: TWMScroll absolute AScrollMsg;
+    //LShiftState: TShiftState;
+  begin
+    ZeroMemory(@LScrollMsg, SizeOf(LScrollMsg));
+
+    //LShiftState := KeysToShiftState(LWheelMsg.Keys);
+
+    // Если зажата Shift - горизонтальная прокрутка, иначе - вертикальная
+    //if ssShift in LShiftState then
+    if GetKeyState(VK_SHIFT) < 0 then
+      LScrollMsg.Msg := WM_HSCROLL
+    else
+      LScrollMsg.Msg := WM_VSCROLL;
+
+    // Если зажата Ctrl - прокручиваем страницами, иначе - построчно
+    //if ssCtrl in LShiftState then
+    if GetKeyState(VK_CONTROL) < 0 then
+    begin
+      if LWheelMsg.WheelDelta > 0 then
+        LScrollMsg.ScrollCode := SB_PAGEUP
+      else
+        LScrollMsg.ScrollCode := SB_PAGEDOWN;
+      // прокрутку выполняем один раз:
+      AScrollCount := 1;
+    end else
+    begin
+      if LWheelMsg.WheelDelta > 0 then
+        LScrollMsg.ScrollCode := SB_LINEUP
+      else
+        LScrollMsg.ScrollCode := SB_LINEDOWN;
+      // прокрутку делаем N-раз
+      //SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, @AScrollCount, 0);
+      AScrollCount := Mouse.WheelScrollLines;
+      if AScrollCount <= 0 then
+        AScrollCount := 1;
+    end;
+  end;
+
+  function IsScrollable(Control: TControl; IsVert: Boolean): Boolean;
+  begin
+    if Control is TScrollingWinControl then
+    begin
+      if IsVert then
+        Result := TScrollingWinControl(Control).VertScrollBar.IsScrollBarVisible
+      else
+        Result := TScrollingWinControl(Control).HorzScrollBar.IsScrollBarVisible;
+    end else
+      Result := False;
+  end;
+
+  function GetScrollPos(Control: TControl; IsVert: Boolean): Integer;
+  begin
+    if Control is TScrollingWinControl then
+    begin
+      if IsVert then
+        Result := TScrollingWinControl(Control).VertScrollBar.Position
+      else
+        Result := TScrollingWinControl(Control).HorzScrollBar.Position;
+    end else
+      Result := 0;
+  end;
+
+  procedure ScrollControl(Control: TControl; var AMessage: TMessage; ScrollCount: DWORD);
+  var
+    i: Integer;
+  begin
+    for i := 1 to ScrollCount do
+      Control.WindowProc(AMessage);
+  end;
+
+var
+  LMsg: TWMMouseWheel absolute Message;
+  LMouseControl: TControl;
+  LControl: TControl;
+  LComponent: TComponent;
+
+  i: Integer;
+
+  LWMScroll: TMessage;
+  LScrollCount: DWORD;
+  LScrollPos: Integer;
+begin
+  // Переопределяем логику обработки колеса мыши следующим образом:
+  //  а) ищем контрол под курсором
+  //  б) далее ищем родительский, который имеет полосы прокрутки
+  //  в) выполняем прокрутку
+  //  г) но не забываем о том, что контрол в фокусе может иметь свою обработку, которую стоит запускать:
+  //     - либо когда он под курсором
+  //     - либо когда он имеет дочерние контролы с прокруткой
+  if FInMouseWheelHandler then
+    Exit;
+  FInMouseWheelHandler := True;
+  try
+    // Если мышь захвачена (например выпавшим списком в Combobox'е) - используем только дефолтовый обработчик
+    if GetCapture <> 0 then
+    begin
+      inherited MouseWheelHandler(Message);
+      Exit;
+    end;
+
+    // Ищем контрол под курсором
+    LMouseControl := FindControl(WindowFromPoint(SmallPointToPoint(TWMMouseWheel(Message).Pos)));
+
+    // Если он при этом в фокусе, отдаём обработку сначала ему
+    if (LMouseControl is TWinControl) and TWinControl(LMouseControl).Focused then
+    begin
+      // HINT: MouseWheelHandler генерирует CM_MOUSEWHEEL сообщение, которое может и не обработаться
+      // поэтому проверяем результат и посылаем сообщение (WM_MOUSEWHEEL) напрямую
+      inherited MouseWheelHandler(Message);
+      if Message.Result = 0 then
+        LMouseControl.WindowProc(Message);
+      if Message.Result <> 0 then
+        Exit;
+    end;
+
+    // Далее обрабатываем такую ситуацию: у контрола, который в фокусе, могут быть дочерние компоненты,
+    // умеющие обрабатывать прокрутку - проверяем это
+    // (например, выпадающие списки в EhLib)
+    if Assigned(ActiveControl) then
+    begin
+      for i := 0 to ActiveControl.ComponentCount - 1 do
+      begin
+        LComponent := ActiveControl.Components[i];
+        if (LComponent is TControl) and TControl(LComponent).Visible then
+        begin
+          TControl(LComponent).WindowProc(Message);
+          if Message.Result <> 0 then
+            Exit;
+        end;
+      end;
+    end;
+
+    // Теперь от контрола под курсором смотрим родительские и пытаемся выполнить прокрутку
+    // посредством передачи сообщения WM_HSCROLL/WM_VSCROLL
+    WheelMsgToScrollMsg(Message, LWMScroll, LScrollCount);
+    LControl := LMouseControl;
+    while Assigned(LControl) do
+    begin
+      if IsScrollable(LControl, LWMScroll.Msg = WM_VSCROLL) then
+      begin
+        // Здесь: нашли контрол с возможностью отреагировать на прокрутку
+        // Теперь обработчик по умолчанию вызываться не должен
+        Message.Result := 1;
+
+        // Пытаемся прокрутить, если при этом реальной прокрутки не было, то смотрим дальше
+        LScrollPos := GetScrollPos(LControl, LWMScroll.Msg = WM_VSCROLL);
+        ScrollControl(LControl, LWMScroll, LScrollCount);
+        if LWMScroll.Result = 0 then
+          if LScrollPos <> GetScrollPos(LControl, LWMScroll.Msg = WM_VSCROLL) then
+            LWMScroll.Result := 1;
+        if LWMScroll.Result <> 0 then
+          Break;
+      end;
+      LControl := LControl.Parent;
+    end;
+
+    {
+    if Message.Result <> 0 then
+       Exit;
+
+    // Так и не обработали, попробуем обработать прокрутку контролом напрямую
+    if Assigned(LMouseControl) then
+      // HINT: здесь используем CM_MOUSEWHEEL, т.к. WM_MOUSEWHEEL вызовет MouseWheelHandler, который придёт сюда
+      Message.Result := LMouseControl.Perform(CM_MOUSEWHEEL, Message.WParam, Message.LParam);
+      это плохо: CM_MOUSEWHEEL обрабатывается TDBComboboxEh, а хочется, чтобы только гридом
+    }
+    if Message.Result = 0 then
+      inherited MouseWheelHandler(Message);
+  finally
+    FInMouseWheelHandler := False;
+  end;
+end;
 
 procedure TBaseForm.DefineProperties(Filer: TFiler);
   function NeedWriteClientSize: Boolean;
@@ -768,55 +701,61 @@ end;
 
 procedure TBaseForm.Loaded;
   {$ifdef Allow_ScaleFix}
-  function NeedScale: Boolean;
-    function DPIChanged: Boolean;
-    begin
-      Result := FPixelsPerInch <> Screen.PixelsPerInch;
-    end;
-
-    //function FontChanged: Boolean;
-    //begin
-    //  Result := ParentFont and ((Application.DefaultFont.Name <> DesignerDefaultFontName) or (Application.DefaultFont.Size <> 8));
-    //end;
-
-    function NeedConstraintsResize: Boolean;
-    begin
-      //Result := (Constraints.MaxHeight <> 0) or (Constraints.MaxWidth <> 0)
-      // (Constraints.MinHeight <> 0) or (Constraints.MinWidth <> 0);
-      //if Result then
-      //  Result
-      Result := (FNCHeight <> 0) or (FNCWidth <> 0);
-    end;
+  function DPIChanged: Boolean;
   begin
+    Result := FPixelsPerInch <> Screen.PixelsPerInch;
+  end;
+
+  //function FontChanged: Boolean;
+  //begin
+  //  Result := ParentFont and ((Application.DefaultFont.Name <> DesignerDefaultFontName) or (Application.DefaultFont.Size <> 8));
+  //end;
+
+  function NeedConstraintsResize: Boolean;
+  begin
+    //Result := (Constraints.MaxHeight <> 0) or (Constraints.MaxWidth <> 0)
+    // (Constraints.MinHeight <> 0) or (Constraints.MinWidth <> 0);
+    //if Result then
+    //  Result
+    Result := (FNCHeight <> 0) or (FNCWidth <> 0);
+  end;
+
+  function NeedScale: Boolean;
+  begin
+//Result := True;
+//Exit;
     Result := (FPixelsPerInch > 0) and (DPIChanged {or FontChanged} or NeedConstraintsResize);
   end;
   {$endif}
 begin
   {$ifdef Allow_ScaleFix}
-  //if (FPixelsPerInch > 0) and ((FPixelsPerInch <> Screen.PixelsPerInch) or (Application.DefaultFont.Name <> 'Tahoma')) then
-  //if (FPixelsPerInch > 0) and (FPixelsPerInch <> Screen.PixelsPerInch) then
+  //HINT: VCL использует ScalingFlags, анализируя их в ReadState
+  //      ReadState вызывается для каждого класса в иерархии, у которых есть DFM ресурс,
+  //      поэтому ScalingFlags используются, чтобы не промасштабировать
+  //      что-то несколько раз.
+  //
+  //      Сейчас масштабирование вынесено в Loaded, а FPixelsPerInch считывается только для Root-компонента,
+  //      поэтому наше масштабирование вызываться будет один раз.
   if NeedScale then
   begin
-    //HINT: VCL использует ScalingFlags, анализируя их в ReadState
-    //      ReadState вызывается для каждого класса в иерархии, у которых есть DFM ресурс,
-    //      поэтому ScalingFlags используются, чтобы не промасштабировать
-    //      что-то несколько раз.
-    //
-    //      Сейчас масштабирование вынесено в Loaded, а FPixelsPerInch считывается только для Root-компонента,
-    //      поэтому наше масштабирование вызываться будет один раз.
-
-    //TODO: VCL масштабирует только в том случае, если меняется размер шрифта.
-    //      Windows, похоже, масштабирует по такому же принципу, но не пропорционально,
-    //      а используя золотое сечение: коэффициент масштабирования
-    //      по X в 1.064 раза больше коэффициента масштабирования по Y
-    // пока не стал заморачиваться на всё это, масштабируем тупо:
-    ScaleControl(Self, Screen.PixelsPerInch, FPixelsPerInch);
-    //ScaleControl(Self, Screen.PixelsPerInch * MulDiv(Canvas.TextWidth('M'), FPixelsPerInch, Screen.PixelsPerInch), FPixelsPerInch * 8,
-    //  Screen.PixelsPerInch, FPixelsPerInch, Screen.PixelsPerInch, FPixelsPerInch);
+    uScaleControls.TScaleControls.Scale(Self, Screen.PixelsPerInch, FPixelsPerInch);
+    FPixelsPerInch := Screen.PixelsPerInch;
   end;
   {$endif}
 
   inherited Loaded;
+end;
+
+function TBaseForm.PostCloseMessage: LRESULT;
+begin
+  // for Modal state - talk Cancel
+  if fsModal in FormState then
+  begin
+    ModalResult := mrCancel;
+    Result := 1;
+  end else
+    // for normal - send command to close
+    Result := LRESULT(PostMessage(Handle, WM_CLOSE, 0, 0));
 end;
 
 function TBaseForm.AutoFree(AObject: TObject; OnEvent: TAutoFreeOnEvent = afDefault): Pointer;
@@ -845,22 +784,39 @@ begin
   Result := AObject;
 end;
 
-procedure TBaseForm.CMDialogKey(var Message: TCMDialogKey);
+//procedure TBaseForm.CMDialogKey(var Message: TCMDialogKey);
+//begin
+//  // handling CloseByEscape
+//  if CloseByEscape then
+//    with Message do
+//      if (CharCode = VK_ESCAPE) and (KeyDataToShiftState(KeyData) = []) then
+//      begin
+//        Result := PostCloseMessage;
+//        if Result <> 0 then
+//          Exit;
+//      end;
+//
+//  inherited;
+//end;
+
+procedure TBaseForm.CMChildKey(var Message: TCMChildKey);
+  function WantSpecKey(AControl: TWinControl; ACharCode: Word): Boolean;
+  begin
+    repeat
+      Result := AControl.Perform(CM_WANTSPECIALKEY, WPARAM(ACharCode), LPARAM(0)) <> LRESULT(0);
+      if Result then
+        Exit;
+      AControl := AControl.Parent;
+      //AControl := AControl.Owner
+    until not Assigned(AControl) or (AControl = Self);
+  end;
 begin
   // handling CloseByEscape
   if CloseByEscape then
     with Message do
-      if (CharCode = VK_ESCAPE) and (KeyDataToShiftState(KeyData) = []) then
+      if (CharCode = VK_ESCAPE) and not WantSpecKey(Sender, CharCode) then
       begin
-        // for Modal state - talk Cancel
-        if fsModal in FormState then
-        begin
-          ModalResult := mrCancel;
-          Result := 1;
-        end else
-          // for normal - send command to close
-          Result := Integer(PostMessage(Handle, WM_CLOSE, 0, 0));
-
+        Result := PostCloseMessage;
         if Result <> 0 then
           Exit;
       end;
@@ -893,6 +849,22 @@ begin
     RestoreFormsPositions;
   inherited;
 end;
+
+//procedure TBaseForm.CMParentFontChanged(var Message: TCMParentFontChanged);
+//begin
+//  inherited;
+//end;
+
+//procedure TBaseForm.WMDpiChanged(var Message: TMessage);
+//var
+//  LNewPPI: Integer;
+//begin
+//  LNewPPI := LOWORD(Message.wParam);
+//  Self.ParentFont := False;
+//  uScaleControls.TScaleControls.Scale(Self, LNewPPI, FPixelsPerInch);
+//  FPixelsPerInch := LNewPPI;
+//  Message.Result := 0;
+//end;
 
 { TBaseFrame }
 
@@ -941,21 +913,27 @@ end;
 
 procedure TBaseFrame.Loaded;
   {$ifdef Allow_ScaleFix}
+  function DPIChanged: Boolean;
+  begin
+    Result := FPixelsPerInch <> Screen.PixelsPerInch;
+  end;
+
+  //function FontChanged: Boolean;
+  //begin
+  //  Result := (Application.DefaultFont.Name <> DesignerDefaultFontName) or (Application.DefaultFont.Size <> 8);
+  //end;
+
   function NeedScale: Boolean;
   begin
-    Result := (FPixelsPerInch <> Screen.PixelsPerInch){ or (Application.DefaultFont.Name <> DesignerDefaultFontName)
-      or (Application.DefaultFont.Size <> 8)};
+    Result := (FPixelsPerInch > 0) and (DPIChanged {or FontChanged});
   end;
   {$endif}
 begin
   {$ifdef Allow_ScaleFix}
-  // масштабируем только в том случае, если фрейма создаётся в Run-Time вручную (т.е. Parent = nil),
+  // масштабируем только в том случае, если фрейм создаётся в Run-Time вручную (т.е. Parent = nil),
   // либо в дизайнере
-  if (FPixelsPerInch > 0) and NeedScale and (not Assigned(Parent) or (csDesigning in ComponentState))
-  then
-    ScaleControl(Self, Screen.PixelsPerInch, FPixelsPerInch);
-    //ScaleControl(Self, Trunc(Screen.PixelsPerInch * 1.064), Trunc(FPixelsPerInch),
-    //  Screen.PixelsPerInch, FPixelsPerInch, Screen.PixelsPerInch, FPixelsPerInch);
+  if NeedScale and (not Assigned(Parent) or (csDesigning in ComponentState)) then
+    uScaleControls.TScaleControls.Scale(Self, Screen.PixelsPerInch, FPixelsPerInch);
   {$endif}
 
   inherited Loaded;
