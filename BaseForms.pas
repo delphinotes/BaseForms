@@ -8,8 +8,8 @@ unit BaseForms;
 ****************************************************************
   Author    : Zverev Nikolay (delphinotes.ru)
   Created   : 30.08.2006
-  Modified  : 04.10.2020
-  Version   : 1.02
+  Modified  : 23.05.2021
+  Version   : 1.03
   History   :
 ****************************************************************
 
@@ -110,10 +110,10 @@ type
     procedure ReadNCWidth(Reader: TReader);
     {$endif}
     procedure ReadScaleFix(Reader: TReader);
-    //procedure CMDialogKey(var Message: TCMDialogKey); message CM_DIALOGKEY;
     procedure CMChildKey(var Message: TCMChildKey); message CM_CHILDKEY;
     procedure WMSetIcon(var Message: TWMSetIcon); message WM_SETICON;
     procedure WMSysCommand(var Message: TWMSysCommand); message WM_SYSCOMMAND;
+    procedure WMQueryOpen(var Message: TWMQueryOpen); message WM_QUERYOPEN;
     procedure WMActivate(var Message: TWMActivate); message WM_ACTIVATE;
     procedure WMWindowPosChanged(var Msg: TWMWindowPosChanged); message WM_WINDOWPOSCHANGED;
     //procedure WMDpiChanged(var Message: TMessage); message WM_DPICHANGED;
@@ -124,6 +124,7 @@ type
 
     procedure InitializeNewForm; {$ifdef TCustomForm_InitializeNewForm}override;{$else}dynamic;{$endif}
     procedure DefineProperties(Filer: TFiler); override;
+    function HandleCreateException: Boolean; override;
     procedure DoClose(var Action: TCloseAction); override;
     procedure DoHide; override;
     procedure DoDestroy; override;
@@ -269,32 +270,113 @@ end;
 {$endif}
 
 {.$region 'RestoreFormsPositions'}
-var
-  IsRestoringPositions: Boolean;
+type
+  TWndList = array of HWND;
 
-procedure RestoreFormsPositions;
 var
-  Count, I: Integer;
-  FormsArray: array of TCustomForm;
+  GIsMinimizing: Boolean;
+  GIsRestoring: Boolean;
+  GIsActivating: Boolean;
+  GLastModalMinimized: TWndList;
+
+procedure GetVisibleNotMinimized(var AWndList: TWndList);
+var
+  LCount, i: Integer;
+  F: TForm;
 begin
-  if IsRestoringPositions then
+  // gets a list of visible and non-minimized windows in the order in which they are displayed
+  SetLength(AWndList, Screen.FormCount);
+  LCount := 0;
+  for i := 0 to Screen.FormCount - 1 do
+  begin
+    F := Screen.Forms[i];
+    if (F.FormStyle <> fsMDIChild) and F.HandleAllocated and IsWindowVisible(F.Handle) and not IsIconic(F.Handle) then
+    begin
+      AWndList[LCount] := F.Handle;
+      Inc(LCount);
+    end;
+  end;
+  SetLength(AWndList, LCount);
+end;
+
+function IsWindowInList(AWnd: HWND; const AWndList: TWndList): Boolean;
+var
+  i: Integer;
+begin
+  Result := True;
+  for i := Low(AWndList) to High(AWndList) do
+    if AWndList[i] = AWnd then
+      Exit;
+  Result := False;
+end;
+
+function HandleMinimizeAllByModal: Boolean;
+var
+  i: Integer;
+begin
+  Result := False;
+  if GIsMinimizing then
     Exit;
-
-  IsRestoringPositions := True;
+  GIsMinimizing := True;
   try
-    // save the window list in the order in which they are displayed
-    Count := Screen.CustomFormCount;
-    SetLength(FormsArray, Count);
-    for I := 0 to Count - 1 do
-      FormsArray[I] := Screen.CustomForms[I];
-
-    // now restore this order
-    SetForegroundWindow(Application.Handle);
-    for I := Count - 1 downto 0 do
-      if FormsArray[I].HandleAllocated then
-        BringWindowToTop(FormsArray[I].Handle);
+    // save the list of non-minimized windows
+    GetVisibleNotMinimized(GLastModalMinimized);
+    // now minimize them all
+    for i := Low(GLastModalMinimized) to High(GLastModalMinimized) do
+      ShowWindow(GLastModalMinimized[i], SW_SHOWMINNOACTIVE);
+    Application.Minimize;
+    Result := True;
   finally
-    IsRestoringPositions := False;
+    GIsMinimizing := False;
+  end;
+end;
+
+function HandleRestoreMinimized(AWnd: HWND): Boolean;
+var
+  i: Integer;
+begin
+  Result := False;
+  if GIsRestoring then
+    Exit;
+  if Length(GLastModalMinimized) = 0 then
+    Exit;
+  GIsRestoring := True;
+  try
+    Application.Restore;
+    if not IsWindowInList(AWnd, GLastModalMinimized) then
+      ShowWindow(AWnd, SW_SHOWNOACTIVATE);
+    for i := High(GLastModalMinimized) downto Low(GLastModalMinimized) do
+      ShowWindow(GLastModalMinimized[i], SW_SHOWNOACTIVATE);
+    SetForegroundWindow(GLastModalMinimized[0]);
+
+    SetLength(GLastModalMinimized, 0);
+    Result := True;
+  finally
+    GIsRestoring := False;
+  end;
+end;
+
+function HandleActivateDisabled(AWnd: HWND): Boolean;
+var
+  LWndList: TWndList;
+  i: Integer;
+begin
+  Result := True;
+  if GIsActivating then
+    Exit;
+  // when activated by Alt+Tab, the WM_QUERYOPEN message is not sent, so we need to restore the minimized windows
+  if HandleRestoreMinimized(AWnd) then
+    Exit;
+  GetVisibleNotMinimized(LWndList);
+  if Length(LWndList) = 0 then
+    Exit;
+  GIsActivating := True;
+  try
+    for i := High(LWndList) downto Low(LWndList) do
+      BringWindowToTop(LWndList[i]);
+    SetForegroundWindow(LWndList[0]);
+  finally
+    GIsActivating := False;
   end;
 end;
 {.$endregion}
@@ -452,7 +534,6 @@ procedure TBaseForm.ReadNCWidth(Reader: TReader);
 begin
   FNCWidth := Reader.ReadInteger;
 end;
-
 {$endif}
 
 procedure TBaseForm.ReadScaleFix(Reader: TReader);
@@ -715,6 +796,17 @@ begin
   {$endif}
 end;
 
+function TBaseForm.HandleCreateException: Boolean;
+begin
+  Result := inherited HandleCreateException;
+  // HandleCreateException вызывает Application.HandleException(Self);
+  // при этом само исключение поглащаетс€, тем самым ошибки в OnCreate формы не отмен€ют создание формы
+  // в итоге форма может создатьс€ не до конца проинициализированной
+  // ћен€ это не устраивает, вызываем Abort дл€ отмены операции создани€ формы при ошибках в OnCreate
+  if Result then
+    Abort; // TODO: AbortOnCreateError default True
+end;
+
 procedure TBaseForm.DoClose(var Action: TCloseAction);
 begin
   if FreeOnClose then
@@ -822,21 +914,6 @@ begin
   Result := AObject;
 end;
 
-//procedure TBaseForm.CMDialogKey(var Message: TCMDialogKey);
-//begin
-//  // handling CloseByEscape
-//  if CloseByEscape then
-//    with Message do
-//      if (CharCode = VK_ESCAPE) and (KeyDataToShiftState(KeyData) = []) then
-//      begin
-//        Result := PostCloseMessage;
-//        if Result <> 0 then
-//          Exit;
-//      end;
-//
-//  inherited;
-//end;
-
 procedure TBaseForm.CMChildKey(var Message: TCMChildKey);
   function WantSpecKey(AControl: TWinControl; ACharCode: Word): Boolean;
   begin
@@ -872,19 +949,41 @@ end;
 
 procedure TBaseForm.WMSysCommand(var Message: TWMSysCommand);
 begin
-  // If a window in a Modal state, minimize the application, instead of the window
   if (Message.CmdType = SC_MINIMIZE) and (fsModal in FormState) then
-    Application.Minimize
-  else
-    inherited;
+  begin
+    // Here: window is in a Modal state, so wee need to minimize all non-minimized windows
+    if HandleMinimizeAllByModal then
+    begin
+      Message.Result := 1;
+      Exit;
+    end;
+  end;
+  inherited;
+end;
+
+procedure TBaseForm.WMQueryOpen(var Message: TWMQueryOpen);
+begin
+  // Here: user clicked on minimized window icon in taskbar
+  if HandleRestoreMinimized(Handle) then
+  begin
+    Message.Result := 0;
+    Exit;
+  end;
+  inherited;
 end;
 
 procedure TBaseForm.WMActivate(var Message: TWMActivate);
 begin
   if not (csDesigning in ComponentState) and (Message.Active > 0) and not IsWindowEnabled(Handle) then
+  begin
     // Here: our window is disabled, but somehow is activated,
     // Most likely there is modal window, if any - then we must show them
-    RestoreFormsPositions;
+    if HandleActivateDisabled(Handle) then
+    begin
+      Message.Result := 0;
+      Exit;
+    end;
+  end;
   inherited;
 end;
 
@@ -895,8 +994,6 @@ begin
     Exit;
   inherited;
 end;
-
-
 
 //procedure TBaseForm.CMParentFontChanged(var Message: TCMParentFontChanged);
 //begin
