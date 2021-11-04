@@ -278,7 +278,7 @@ var
   GIsRestoring: Boolean;
   GIsActivating: Boolean;
   GLastModalMinimized: TWndList;
-  GLastDisabledEnabled: TWndList;
+  GLastDisabled: TWndList;
 
 procedure GetVisibleNotMinimized(var AWndList: TWndList);
 var
@@ -300,19 +300,44 @@ begin
   SetLength(AWndList, LCount);
 end;
 
-procedure GetDisabled(const AWndList: TWndList; var ADisabledWndList: TWndList);
+procedure GetDisabled(var AWndList: TWndList);
 var
   LCount, i: Integer;
+  F: TForm;
 begin
-  SetLength(ADisabledWndList, Length(AWndList));
+  // gets a list of visible and disabled windows
+  SetLength(AWndList, Screen.FormCount);
   LCount := 0;
-  for i := Low(AWndList) to High(AWndList) do
-    if not IsWindowEnabled(AWndList[i]) then
+  for i := 0 to Screen.FormCount - 1 do
+  begin
+    F := Screen.Forms[i];
+    if (F.FormStyle <> fsMDIChild) and F.HandleAllocated and IsWindowVisible(F.Handle) and not IsWindowEnabled(F.Handle) then
     begin
-      ADisabledWndList[LCount] := AWndList[i];
+      AWndList[LCount] := F.Handle;
       Inc(LCount);
     end;
-  SetLength(ADisabledWndList, LCount);
+  end;
+  SetLength(AWndList, LCount);
+end;
+
+procedure EnableDisabled;
+var
+  i: Integer;
+begin
+  // https://www.sql.ru/forum/actualutils.aspx?action=gotomsg&tid=1339878&msg=22391822
+  GetDisabled(GLastDisabled);
+  for i := Low(GLastDisabled) to High(GLastDisabled) do
+    EnableWindow(GLastDisabled[i], True);
+end;
+
+procedure DisableEnabled;
+var
+  i: Integer;
+begin
+  // https://www.sql.ru/forum/actualutils.aspx?action=gotomsg&tid=1339878&msg=22391822
+  for i := Low(GLastDisabled) to High(GLastDisabled) do
+    EnableWindow(GLastDisabled[i], False);
+  SetLength(GLastDisabled, 0);
 end;
 
 function IsWindowInList(AWnd: HWND; const AWndList: TWndList): Boolean;
@@ -342,12 +367,8 @@ begin
       ShowWindow(GLastModalMinimized[i], SW_SHOWMINNOACTIVE);
     Application.Minimize;
     // save the list of disabled windows and enable them
-    // https://www.sql.ru/forum/actualutils.aspx?action=gotomsg&tid=1339878&msg=22391822
-    GetDisabled(GLastModalMinimized, GLastDisabledEnabled);
-    for i := Low(GLastDisabledEnabled) to High(GLastDisabledEnabled) do
-      EnableWindow(GLastDisabledEnabled[i], True);
+    EnableDisabled;
 
-    //EnableWindow(Application.MainFormHandle, True);
     Result := True;
   finally
     GIsMinimizing := False;
@@ -366,10 +387,7 @@ begin
   GIsRestoring := True;
   try
     // disable previously enabled windows
-    // https://www.sql.ru/forum/actualutils.aspx?action=gotomsg&tid=1339878&msg=22391822
-    for i := Low(GLastDisabledEnabled) to High(GLastDisabledEnabled) do
-      EnableWindow(GLastDisabledEnabled[i], False);
-    SetLength(GLastDisabledEnabled, 0);
+    DisableEnabled;
 
     Application.Restore;
     if not IsWindowInList(AWnd, GLastModalMinimized) then
