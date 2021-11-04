@@ -305,7 +305,11 @@ var
   LCount, i: Integer;
   F: TForm;
 begin
+<<<<<<< HEAD
   // gets a list of visible and disabled windows
+=======
+  // gets a list of visible and non-minimized windows in the order in which they are displayed
+>>>>>>> 051ba9b04cd684e2d8ea62bcee86ad1fe25922db
   SetLength(AWndList, Screen.FormCount);
   LCount := 0;
   for i := 0 to Screen.FormCount - 1 do
